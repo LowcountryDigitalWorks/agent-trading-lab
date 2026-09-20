@@ -1,0 +1,53 @@
+{
+  "allowed_redesign_count": 1,
+  "cost_config": {"incremental_cash_usd": 0},
+  "created_at_utc": "2026-01-01T00:00:00Z",
+  "derived_artifacts": [
+    {
+      "name": "candidate-envelope.json",
+      "parent_hashes": ["0b6d2d786b671c83fb8533dd6b7856175622f9ac424dd00375932e3ea4095b11"],
+      "sha256": "2836d6151b3989a3820dc3987c40658b71292ef2a9f664fa347db47080cbf811"
+    }
+  ],
+  "deterministic_seeds": {"fixture": 1},
+  "environment_lock_hash": "7d55e35c5884f2da8a9e57e2a67f1030dac40f7350570b69070255e83af016d4",
+  "execution_config": {"mode": "offline-synthetic"},
+  "experiment_id": "synthetic-release-0.1",
+  "git_commit": "synthetic-fixture",
+  "integrations": {"freqtrade_ref": null, "prediction_market_bench_ref": null},
+  "model": {
+    "adapter_version": "0.1",
+    "model_id": null,
+    "model_version": null,
+    "prompt_hash": null,
+    "prompt_version": null,
+    "provider": null,
+    "schema_hash": "7a632451211d73d44c6557c9871ed8aa787df2750245ea7055f39867068ac70e"
+  },
+  "partitions": [
+    {"fraction": 0.5, "locked": false, "name": "train"},
+    {"fraction": 0.2, "locked": false, "name": "dev"},
+    {"fraction": 0.15, "locked": true, "name": "oos-a"},
+    {"fraction": 0.15, "locked": true, "name": "oos-b"}
+  ],
+  "run_id": "synthetic-run-001",
+  "schema_version": "run-manifest.v1",
+  "source": {
+    "counts": {"events": 1, "markets": 1, "rows": 1},
+    "coverage": {"end_utc": "2026-01-02T00:00:00Z", "start_utc": "2026-01-01T00:00:00Z"},
+    "license_ref": "Apache-2.0 / LDW-authored synthetic fixture",
+    "name": "LDW synthetic fixture",
+    "raw_inputs": [
+      {
+        "name": "synthetic-source.json",
+        "sha256": "0b6d2d786b671c83fb8533dd6b7856175622f9ac424dd00375932e3ea4095b11"
+      }
+    ],
+    "retrieved_at_utc": "2026-01-01T00:00:00Z",
+    "timezone": "UTC",
+    "upstream_url": "urn:ldw:synthetic:agent-trading-lab:fixture-v1",
+    "version_ref": "fixture-v1"
+  },
+  "track": "0B",
+  "transform_code_commit": "synthetic-fixture"
+}

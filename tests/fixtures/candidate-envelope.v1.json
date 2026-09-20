@@ -1,0 +1,34 @@
+{
+  "candidate_id": "synthetic-market-001@2026-01-01T12:00:00Z",
+  "context_refs": [
+    {
+      "available_at_utc": "2026-01-01T11:59:00Z",
+      "content_hash": "756c258fbbbc427f970e15843fcd773e7aad3e57e9c8f87adbae1ee1355cf08f",
+      "ref_id": "synthetic-context-001"
+    }
+  ],
+  "decision_time_utc": "2026-01-01T12:00:00Z",
+  "event_time_utc": "2026-01-01T12:00:00Z",
+  "experiment_id": "synthetic-release-0.1",
+  "features": [
+    {
+      "available_at_utc": "2026-01-01T12:00:00Z",
+      "name": "time_to_resolution_hours",
+      "value": 24
+    }
+  ],
+  "instrument_id": "synthetic-market-001",
+  "instrument_type": "binary_prediction",
+  "market_state": {
+    "best_ask_yes": 0.52,
+    "best_bid_yes": 0.48,
+    "midpoint_yes": 0.5
+  },
+  "observation_cutoff_utc": "2026-01-01T12:00:00Z",
+  "schema_version": "candidate-envelope.v1",
+  "source_id": "ldw-synthetic",
+  "source_version": "1",
+  "state_hash": "bed4cc84d886b987fc1dbb38307082c28fd2d2abee99d251d084dbfcb4bb12c9",
+  "track": "0B",
+  "venue": "synthetic"
+}

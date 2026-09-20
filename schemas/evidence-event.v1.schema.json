@@ -1,0 +1,18 @@
+{
+  "$id": "https://lowcountrydigitalworks.com/schemas/agent-trading-lab/evidence-event.v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "event_type": {"enum": ["run_started","candidate","decision","gate","fill","resolution","metric","run_closed"]},
+    "payload": {},
+    "prev_record_hash": {"pattern": "^[a-f0-9]{64}$", "type": ["string","null"]},
+    "record_hash": {"pattern": "^[a-f0-9]{64}$", "type": "string"},
+    "recorded_at_utc": {"format": "date-time", "type": "string"},
+    "run_id": {"minLength": 1, "type": "string"},
+    "schema_version": {"const": "evidence-event.v1"},
+    "sequence": {"minimum": 0, "type": "integer"}
+  },
+  "required": ["schema_version","run_id","sequence","event_type","recorded_at_utc","payload","prev_record_hash","record_hash"],
+  "title": "EvidenceEvent v1",
+  "type": "object"
+}
