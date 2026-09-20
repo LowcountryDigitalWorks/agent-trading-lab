@@ -16,8 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
-      - name: Checkout candidate
+      - name: Checkout exact candidate head
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -72,7 +74,7 @@ jobs:
           node scripts/run-public-proof.mjs \
             --data-dir proof-data \
             --output-dir proof-output \
-            --git-commit "$GITHUB_SHA" \
+            --git-commit '${{ github.event.pull_request.head.sha }}' \
             --freqtrade-version '${{ steps.freqtrade.outputs.version }}' \
             --freqtrade-image-digest '${{ steps.freqtrade.outputs.digest }}' \
             --acquired-at-utc '${{ steps.acquire.outputs.acquired_at_utc }}' \
@@ -80,7 +82,7 @@ jobs:
       - name: Publish sanitized proof evidence
         uses: actions/upload-artifact@v4
         with:
-          name: release-0.2-public-data-proof-${{ github.sha }}
+          name: release-0.2-public-data-proof-${{ github.event.pull_request.head.sha }}
           path: proof-output/
           if-no-files-found: error
           retention-days: 30
