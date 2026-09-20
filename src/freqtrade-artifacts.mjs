@@ -75,12 +75,16 @@ export function parseFreqtradeOhlcvJson(text, { pair, timeframe, startMs = PROOF
   const rows = parseJsonArray(text, `${pair} ${timeframe} OHLCV`);
   const candles = [];
   let previous = null;
+  let rawEarliest = null;
+  let rawLatest = null;
+  let excludedBeforeWindow = 0;
+  let excludedAfterWindow = 0;
+
   for (let index = 0; index < rows.length; index += 1) {
     const row = rows[index];
     if (!Array.isArray(row) || row.length !== 6) fail(`${pair} ${timeframe} row ${index} must have exactly 6 positional values`);
     const [timestamp, open, high, low, close, volume] = row;
     integer(timestamp, `${pair} ${timeframe} row ${index} timestamp`);
-    if (timestamp < startMs || timestamp >= endMs) fail(`${pair} ${timeframe} row ${index} timestamp is outside the frozen proof window`);
     if (timestamp % step !== 0) fail(`${pair} ${timeframe} row ${index} timestamp is not aligned to timeframe`);
     if (previous !== null && timestamp <= previous) {
       if (timestamp === previous) fail(`${pair} ${timeframe} duplicate candle timestamp at ${iso(timestamp)}`);
@@ -92,15 +96,29 @@ export function parseFreqtradeOhlcvJson(text, { pair, timeframe, startMs = PROOF
     finite(close, `${pair} ${timeframe} close`, { positive: true });
     finite(volume, `${pair} ${timeframe} volume`, { nonNegative: true });
     if (high < Math.max(open, close, low) || low > Math.min(open, close, high)) fail(`${pair} ${timeframe} row ${index} has inconsistent OHLC values`);
-    candles.push({ timestamp_ms: timestamp, open, high, low, close, base_volume: volume });
+
+    rawEarliest ??= timestamp;
+    rawLatest = timestamp;
+    if (timestamp < startMs) excludedBeforeWindow += 1;
+    else if (timestamp >= endMs) excludedAfterWindow += 1;
+    else candles.push({ timestamp_ms: timestamp, open, high, low, close, base_volume: volume });
+
     previous = timestamp;
   }
-  if (candles.length === 0) fail(`${pair} ${timeframe} artifact is empty`);
+
+  if (rows.length === 0) fail(`${pair} ${timeframe} artifact is empty`);
+  if (candles.length === 0) fail(`${pair} ${timeframe} artifact contains no rows in the frozen proof window`);
+
   return {
     pair,
     timeframe,
     candles,
     diagnostics: {
+      raw_count: rows.length,
+      raw_earliest_utc: iso(rawEarliest),
+      raw_latest_utc: iso(rawLatest),
+      excluded_before_window: excludedBeforeWindow,
+      excluded_after_window: excludedAfterWindow,
       count: candles.length,
       earliest_utc: iso(candles[0].timestamp_ms),
       latest_utc: iso(candles.at(-1).timestamp_ms),
@@ -117,34 +135,55 @@ export function parseFreqtradeTradesJson(text, { pair, startMs = PROOF_START_MS,
   const trades = [];
   const ids = new Set();
   let previous = null;
+  let rawEarliest = null;
+  let rawLatest = null;
+  let excludedBeforeWindow = 0;
+  let excludedAfterWindow = 0;
   let sameTimestampTrades = 0;
+
   for (let index = 0; index < rows.length; index += 1) {
     const row = rows[index];
     if (!Array.isArray(row) || row.length !== 7) fail(`${pair} trade row ${index} must have exactly 7 positional values`);
     const [timestamp, id, type, side, price, amount, suppliedCost] = row;
     integer(timestamp, `${pair} trade row ${index} timestamp`);
-    if (timestamp < startMs || timestamp >= endMs) fail(`${pair} trade row ${index} timestamp is outside the frozen proof window`);
     if (previous !== null && timestamp < previous) fail(`${pair} trade timestamps are not nondecreasing`);
     if (previous === timestamp) sameTimestampTrades += 1;
+
     const idKey = String(id);
     if (idKey.length === 0) fail(`${pair} trade row ${index} has an empty id`);
     if (ids.has(idKey)) fail(`${pair} duplicate trade id: ${idKey}`);
     ids.add(idKey);
+
     if (!(type === null || typeof type === "string")) fail(`${pair} trade row ${index} type must be string or null`);
     if (!(side === null || typeof side === "string")) fail(`${pair} trade row ${index} side must be string or null`);
     finite(price, `${pair} trade row ${index} price`, { positive: true });
     finite(amount, `${pair} trade row ${index} amount`, { positive: true });
     finite(suppliedCost, `${pair} trade row ${index} cost`, { nonNegative: true });
+
     const quoteCost = price * amount;
     finite(quoteCost, `${pair} trade row ${index} derived quote cost`, { positive: true });
-    trades.push({ timestamp_ms: timestamp, id: idKey, type, side, price, amount, quote_cost: quoteCost, supplied_cost: suppliedCost });
+
+    rawEarliest ??= timestamp;
+    rawLatest = timestamp;
+    if (timestamp < startMs) excludedBeforeWindow += 1;
+    else if (timestamp >= endMs) excludedAfterWindow += 1;
+    else trades.push({ timestamp_ms: timestamp, id: idKey, type, side, price, amount, quote_cost: quoteCost, supplied_cost: suppliedCost });
+
     previous = timestamp;
   }
-  if (trades.length === 0) fail(`${pair} trades artifact is empty`);
+
+  if (rows.length === 0) fail(`${pair} trades artifact is empty`);
+  if (trades.length === 0) fail(`${pair} trades artifact contains no rows in the frozen proof window`);
+
   return {
     pair,
     trades,
     diagnostics: {
+      raw_count: rows.length,
+      raw_earliest_utc: iso(rawEarliest),
+      raw_latest_utc: iso(rawLatest),
+      excluded_before_window: excludedBeforeWindow,
+      excluded_after_window: excludedAfterWindow,
       count: trades.length,
       earliest_utc: iso(trades[0].timestamp_ms),
       latest_utc: iso(trades.at(-1).timestamp_ms),

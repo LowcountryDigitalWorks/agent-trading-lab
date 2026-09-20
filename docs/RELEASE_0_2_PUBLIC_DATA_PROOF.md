@@ -16,7 +16,7 @@ The exact command/config is versioned in `proof/acquisition.json`.
 
 ## Deterministic normalization and quote volume
 
-Freqtrade OHLCV JSON is treated as positional `[timestamp, open, high, low, close, volume]`. Trade JSON is treated as positional `[timestamp, id, type, side, price, amount, cost]`. Import fails closed on unexpected pairs/timeframes/window, malformed rows, non-finite values, out-of-order records, duplicate candle timestamps, or duplicate trade IDs. Equal trade timestamps are permitted because distinct public trades may share a millisecond; they are counted diagnostically.
+Freqtrade OHLCV JSON is treated as positional `[timestamp, open, high, low, close, volume]`. Trade JSON is treated as positional `[timestamp, id, type, side, price, amount, cost]`. Import fails closed on unexpected pairs/timeframes/window configuration, malformed rows, non-finite values, out-of-order records, duplicate candle timestamps, or duplicate trade IDs. Freqtrade/Kraken may return validated boundary over-fetch beyond the requested timerange; those ordered/validated rows are deterministically excluded from the frozen proof window and the raw range plus excluded-before/excluded-after counts are retained in data-quality diagnostics. Equal trade timestamps are permitted because distinct public trades may share a millisecond; they are counted diagnostically.
 
 The liquidity gate does **not** approximate quote volume as base-volume × close. Five-minute quote volume is derived from the public trade artifact as `sum(price × amount)` for the execution bucket and is hashed as a derived artifact with the raw trade hash as its parent.
 

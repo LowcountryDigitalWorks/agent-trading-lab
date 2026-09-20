@@ -65,10 +65,39 @@ test("OHLCV importer validates positional artifact and rejects duplicate timesta
   assert.throws(() => parseFreqtradeOhlcvJson(candleJson([rows[0], rows[0]]), { pair: "BTC/USDT", timeframe: "5m" }), /duplicate candle timestamp/u);
 });
 
-test("importers fail closed on malformed or out-of-window data", () => {
+test("importers fail closed on malformed data or artifacts with no frozen-window rows", () => {
   assert.throws(() => parseFreqtradeOhlcvJson("{}", { pair: "BTC/USDT", timeframe: "5m" }), /JSON array/u);
-  assert.throws(() => parseFreqtradeOhlcvJson(candleJson([[PROOF_END_MS, 1, 1, 1, 1, 0]]), { pair: "BTC/USDT", timeframe: "5m" }), /outside the frozen proof window/u);
+  assert.throws(
+    () => parseFreqtradeOhlcvJson(candleJson([[PROOF_END_MS, 1, 1, 1, 1, 0]]), { pair: "BTC/USDT", timeframe: "5m" }),
+    /no rows in the frozen proof window/u,
+  );
   assert.throws(() => parseFreqtradeTradesJson(tradeJson([[PROOF_START_MS, "a", null, "buy", 1, 1]]), { pair: "BTC/USDT" }), /exactly 7/u);
+});
+
+test("importers deterministically trim validated Freqtrade boundary over-fetch and report it", () => {
+  const candleRows = [
+    [PROOF_START_MS - TIMEFRAME_MS["5m"], 99, 100, 98, 99, 1],
+    [PROOF_START_MS, 100, 101, 99, 100, 1],
+    [PROOF_END_MS, 101, 102, 100, 101, 1],
+  ];
+  const candles = parseFreqtradeOhlcvJson(candleJson(candleRows), { pair: "BTC/USDT", timeframe: "5m" });
+  assert.equal(candles.candles.length, 1);
+  assert.equal(candles.candles[0].timestamp_ms, PROOF_START_MS);
+  assert.equal(candles.diagnostics.raw_count, 3);
+  assert.equal(candles.diagnostics.excluded_before_window, 1);
+  assert.equal(candles.diagnostics.excluded_after_window, 1);
+
+  const tradeRows = [
+    [PROOF_START_MS - 1, "before", null, "buy", 99, 1, 99],
+    [PROOF_START_MS + 1, "inside", null, "buy", 100, 2, 200],
+    [PROOF_END_MS, "after", null, "sell", 101, 1, 101],
+  ];
+  const trades = parseFreqtradeTradesJson(tradeJson(tradeRows), { pair: "BTC/USDT" });
+  assert.equal(trades.trades.length, 1);
+  assert.equal(trades.trades[0].id, "inside");
+  assert.equal(trades.diagnostics.raw_count, 3);
+  assert.equal(trades.diagnostics.excluded_before_window, 1);
+  assert.equal(trades.diagnostics.excluded_after_window, 1);
 });
 
 test("quote volume is derived from price times amount, not supplied cost", () => {
