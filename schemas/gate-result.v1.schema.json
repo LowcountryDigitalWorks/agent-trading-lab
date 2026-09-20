@@ -1,0 +1,17 @@
+{
+  "$id": "https://lowcountrydigitalworks.com/schemas/agent-trading-lab/gate-result.v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "accepted": {"type": "boolean"},
+    "action": {"enum": ["BUY","SELL","HOLD","SKIP"]},
+    "candidate_id": {"minLength": 1, "type": "string"},
+    "decision_output_hash": {"pattern": "^[a-f0-9]{64}$", "type": "string"},
+    "reason_code": {"minLength": 1, "type": "string"},
+    "reason_detail": {"type": ["string","null"]},
+    "schema_version": {"const": "gate-result.v1"}
+  },
+  "required": ["schema_version","candidate_id","decision_output_hash","accepted","action","reason_code","reason_detail"],
+  "title": "GateResult v1",
+  "type": "object"
+}

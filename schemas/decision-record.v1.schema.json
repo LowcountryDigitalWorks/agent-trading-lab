@@ -1,0 +1,27 @@
+{
+  "$id": "https://lowcountrydigitalworks.com/schemas/agent-trading-lab/decision-record.v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "action": {"enum": ["BUY","SELL","HOLD","SKIP"]},
+    "adapter_id": {"minLength": 1, "type": "string"},
+    "adapter_version": {"minLength": 1, "type": "string"},
+    "candidate_id": {"minLength": 1, "type": "string"},
+    "incremental_cost_usd": {"minimum": 0, "type": "number"},
+    "input_hash": {"pattern": "^[a-f0-9]{64}$", "type": "string"},
+    "input_tokens": {"minimum": 0, "type": ["integer","null"]},
+    "instrument_side": {"enum": ["YES","NO",null], "type": ["string","null"]},
+    "latency_ms": {"minimum": 0, "type": "integer"},
+    "model_id": {"type": ["string","null"]},
+    "model_version": {"type": ["string","null"]},
+    "output_hash": {"pattern": "^[a-f0-9]{64}$", "type": "string"},
+    "output_tokens": {"minimum": 0, "type": ["integer","null"]},
+    "p_yes": {"maximum": 0.99, "minimum": 0.01, "type": ["number","null"]},
+    "prompt_version": {"type": ["string","null"]},
+    "schema_version": {"const": "decision-record.v1"},
+    "status": {"enum": ["ok","invalid","timeout","unavailable"]}
+  },
+  "required": ["candidate_id","adapter_id","adapter_version","action","instrument_side","p_yes","status","model_id","model_version","prompt_version","schema_version","input_hash","output_hash","latency_ms","input_tokens","output_tokens","incremental_cost_usd"],
+  "title": "DecisionRecord v1",
+  "type": "object"
+}
