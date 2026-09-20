@@ -1,0 +1,85 @@
+name: Release 0.2 Public Data Proof
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+
+permissions:
+  contents: read
+
+jobs:
+  public-data-proof:
+    if: contains(github.event.pull_request.body || '', 'RUN_PUBLIC_DATA_PROOF=1')
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install repository
+        run: npm ci
+      - name: Resolve pinned Freqtrade runtime
+        id: freqtrade
+        shell: bash
+        run: |
+          set -euo pipefail
+          image='freqtradeorg/freqtrade@sha256:4d23160b501d2b34579e76f57ad75edfa274967cd0dd824ff1c1b86d8c166ab4'
+          docker pull "$image"
+          version="$(docker run --rm "$image" --version | tr '\n' ' ')"
+          printf '%s\n' "$version"
+          grep -Eq '2026\.8' <<<"$version"
+          digest="$(docker image inspect --format='{{index .RepoDigests 0}}' "$image")"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+      - name: Acquire frozen Kraken public data
+        id: acquire
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p proof-data proof-output
+          chmod 0777 proof-data
+          acquired_at_utc="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          command='freqtrade download-data --exchange kraken --pairs BTC/USDT ETH/USDT --timerange 20260801-20260901 --dl-trades --convert --timeframes 5m 1h --trading-mode spot --data-format-ohlcv json --data-format-trades json --datadir /freqtrade/proof-data'
+          docker run --rm \
+            -v "$PWD/proof-data:/freqtrade/proof-data" \
+            '${{ steps.freqtrade.outputs.image }}' \
+            download-data \
+            --exchange kraken \
+            --pairs BTC/USDT ETH/USDT \
+            --timerange 20260801-20260901 \
+            --dl-trades \
+            --convert \
+            --timeframes 5m 1h \
+            --trading-mode spot \
+            --data-format-ohlcv json \
+            --data-format-trades json \
+            --datadir /freqtrade/proof-data
+          echo "acquired_at_utc=$acquired_at_utc" >> "$GITHUB_OUTPUT"
+          echo "command=$command" >> "$GITHUB_OUTPUT"
+          find proof-data -maxdepth 4 -type f -printf '%P\n' | sort
+      - name: Run deterministic measurement proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/run-public-proof.mjs \
+            --data-dir proof-data \
+            --output-dir proof-output \
+            --git-commit "$GITHUB_SHA" \
+            --freqtrade-version '${{ steps.freqtrade.outputs.version }}' \
+            --freqtrade-image-digest '${{ steps.freqtrade.outputs.digest }}' \
+            --acquired-at-utc '${{ steps.acquire.outputs.acquired_at_utc }}' \
+            --acquisition-command '${{ steps.acquire.outputs.command }}'
+      - name: Publish sanitized proof evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-0.2-public-data-proof-${{ github.sha }}
+          path: proof-output/
+          if-no-files-found: error
+          retention-days: 30

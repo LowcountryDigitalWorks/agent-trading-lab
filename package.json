@@ -1,8 +1,8 @@
 {
   "name": "@lowcountrydigitalworks/agent-trading-lab",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Deterministic measurement-contract scaffold for the Lowcountry Digital Works Agent Trading Lab.",
+  "description": "Deterministic public-data measurement integration for the Lowcountry Digital Works Agent Trading Lab.",
   "type": "module",
   "engines": {
     "node": ">=22"

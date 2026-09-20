@@ -20,3 +20,10 @@ Not required or incorporated in Release 0.1. If a later release incorporates MIT
 ## PolyBench
 
 Reference only for now. Do not copy, vendor, redistribute, or ingest its code/data until explicit reuse terms are established and separately reviewed.
+
+## Release 0.2 external runtime boundary
+
+Release 0.2 resolves Freqtrade tag `2026.8` (upstream commit `9f10e357a93c1dcf10c2a2b367659214d89c073e`) only as an external GPLv3 CLI/file-artifact producer. LDW code does not import, link, vendor, copy, or redistribute Freqtrade implementation code.
+
+The repository still has zero npm runtime dependencies and zero npm development dependencies. The one-time public-data workflow pins the Freqtrade container by digest and uses only public Kraken historical data. Raw downloaded market data is not committed or uploaded as the retained proof artifact.
+

@@ -65,3 +65,10 @@ Exactly one redesign is allowed after OOS-A failure; evaluation rules cannot be 
 ## Release 0.1 exclusions
 
 No Freqtrade integration, market downloads, PredictionMarketBench integration, PolyBench ingestion, external model/API calls, brokerage/exchange connectivity, automated paper/live trading, wallet/signing code, Robinhood Chain, Pons, customer functionality, credentials, secrets, paid services, or real capital.
+
+## Release 0.2 implementation status
+
+Release 0.2 implements only the frozen Phase 0A measurement integration described above for Kraken spot public historical data, BTC/USDT and ETH/USDT, from 2026-08-01T00:00:00Z through 2026-09-01T00:00:00Z (end exclusive). The Phase 0B/model assumptions in this document remain future contract material and are not implemented by Release 0.2.
+
+The Phase 0A replay uses closed 1h EMA20/EMA50 transitions, nominal first-eligible-5m execution strictly after decision close, the accepted nominal/stress costs, the accepted virtual risk envelope, and a quote-volume liquidity gate derived from public trade cost `price * amount`. This remains a measurement proof and not an alpha claim.
+

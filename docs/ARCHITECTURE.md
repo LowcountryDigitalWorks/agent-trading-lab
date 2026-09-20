@@ -23,3 +23,14 @@ The persisted evidence chain hashes each full record, including `recorded_at_utc
 ## Future boundaries
 
 Freqtrade, if later authorized, remains an external CLI/file-artifact boundary. No GPLv3 Freqtrade code is included or imported here. PredictionMarketBench and PolyBench are not Release 0.1 dependencies.
+
+## Release 0.2 public-data measurement integration
+
+Release 0.2 adds one deterministic external-artifact path:
+
+`Freqtrade 2026.8 external CLI -> frozen Kraken public trades -> plain JSON trade/OHLCV artifacts -> LDW validation/normalization -> Phase 0A EMA20/EMA50 replay -> Release 0.1 evidence contracts`
+
+Freqtrade remains outside the LDW-authored runtime dependency graph. Routine CI uses synthetic fixtures only. The controlled real-data proof runs separately, does not commit raw market datasets, and produces only sanitized manifests, hashes, diagnostics, metrics, and evidence artifacts.
+
+Quote volume for the liquidity gate is derived from the public trade artifact as `sum(price * amount)` per 5m bucket. Decisions occur only after 1h candle close; nominal execution uses the first 5m bar strictly after the decision and stress adds one 5m bar.
+
