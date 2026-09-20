@@ -28,6 +28,13 @@ function requireFields(object, fields, label) {
   }
 }
 
+function rejectUnknownFields(object, allowedFields, label) {
+  const allowed = new Set(allowedFields);
+  for (const field of Object.keys(object)) {
+    assert(allowed.has(field), `${label} contains unknown field: ${field}`);
+  }
+}
+
 function assertString(value, name) {
   assert(typeof value === "string" && value.length > 0, `${name} must be a non-empty string`);
 }
@@ -46,28 +53,26 @@ function assertNonNegativeNumber(value, name) {
 }
 
 export function validateCandidateEnvelope(candidate) {
-  requireFields(
-    candidate,
-    [
-      "schema_version",
-      "experiment_id",
-      "track",
-      "candidate_id",
-      "event_time_utc",
-      "decision_time_utc",
-      "observation_cutoff_utc",
-      "source_id",
-      "source_version",
-      "venue",
-      "instrument_id",
-      "instrument_type",
-      "state_hash",
-      "features",
-      "market_state",
-      "context_refs",
-    ],
-    "CandidateEnvelope",
-  );
+  const fields = [
+    "schema_version",
+    "experiment_id",
+    "track",
+    "candidate_id",
+    "event_time_utc",
+    "decision_time_utc",
+    "observation_cutoff_utc",
+    "source_id",
+    "source_version",
+    "venue",
+    "instrument_id",
+    "instrument_type",
+    "state_hash",
+    "features",
+    "market_state",
+    "context_refs",
+  ];
+  requireFields(candidate, fields, "CandidateEnvelope");
+  rejectUnknownFields(candidate, fields, "CandidateEnvelope");
   assert(candidate.schema_version === "candidate-envelope.v1", "CandidateEnvelope schema_version must be candidate-envelope.v1");
   assert(["0A", "0B"].includes(candidate.track), "CandidateEnvelope track must be 0A or 0B");
   for (const field of ["experiment_id", "candidate_id", "source_id", "source_version", "venue", "instrument_id", "instrument_type"]) {
@@ -98,29 +103,27 @@ export function validateCandidateEnvelope(candidate) {
 }
 
 export function validateDecisionRecord(decision) {
-  requireFields(
-    decision,
-    [
-      "candidate_id",
-      "adapter_id",
-      "adapter_version",
-      "action",
-      "instrument_side",
-      "p_yes",
-      "status",
-      "model_id",
-      "model_version",
-      "prompt_version",
-      "schema_version",
-      "input_hash",
-      "output_hash",
-      "latency_ms",
-      "input_tokens",
-      "output_tokens",
-      "incremental_cost_usd",
-    ],
-    "DecisionRecord",
-  );
+  const fields = [
+    "candidate_id",
+    "adapter_id",
+    "adapter_version",
+    "action",
+    "instrument_side",
+    "p_yes",
+    "status",
+    "model_id",
+    "model_version",
+    "prompt_version",
+    "schema_version",
+    "input_hash",
+    "output_hash",
+    "latency_ms",
+    "input_tokens",
+    "output_tokens",
+    "incremental_cost_usd",
+  ];
+  requireFields(decision, fields, "DecisionRecord");
+  rejectUnknownFields(decision, fields, "DecisionRecord");
   assert(decision.schema_version === "decision-record.v1", "DecisionRecord schema_version must be decision-record.v1");
   for (const field of ["candidate_id", "adapter_id", "adapter_version"]) assertString(decision[field], `DecisionRecord.${field}`);
   assert(ACTIONS.includes(decision.action), "DecisionRecord.action is invalid");
@@ -141,7 +144,9 @@ export function validateDecisionRecord(decision) {
 }
 
 export function validateGateResult(gate) {
-  requireFields(gate, ["schema_version", "candidate_id", "decision_output_hash", "accepted", "action", "reason_code", "reason_detail"], "GateResult");
+  const fields = ["schema_version", "candidate_id", "decision_output_hash", "accepted", "action", "reason_code", "reason_detail"];
+  requireFields(gate, fields, "GateResult");
+  rejectUnknownFields(gate, fields, "GateResult");
   assert(gate.schema_version === "gate-result.v1", "GateResult schema_version must be gate-result.v1");
   assertString(gate.candidate_id, "GateResult.candidate_id");
   assert(isSha256Hex(gate.decision_output_hash), "GateResult.decision_output_hash must be SHA-256 hex");
@@ -154,11 +159,9 @@ export function validateGateResult(gate) {
 }
 
 export function validateFillRecord(fill) {
-  requireFields(
-    fill,
-    ["schema_version", "candidate_id", "action_id", "execution_time_utc", "side", "requested_qty", "filled_qty", "reference_price", "effective_price", "fee", "spread_cost", "slippage_cost", "fill_status", "execution_mode", "source_hash"],
-    "FillRecord",
-  );
+  const fields = ["schema_version", "candidate_id", "action_id", "execution_time_utc", "side", "requested_qty", "filled_qty", "reference_price", "effective_price", "fee", "spread_cost", "slippage_cost", "fill_status", "execution_mode", "source_hash"];
+  requireFields(fill, fields, "FillRecord");
+  rejectUnknownFields(fill, fields, "FillRecord");
   assert(fill.schema_version === "fill-record.v1", "FillRecord schema_version must be fill-record.v1");
   for (const field of ["candidate_id", "action_id", "side", "fill_status", "execution_mode"]) assertString(fill[field], `FillRecord.${field}`);
   assertIsoUtc(fill.execution_time_utc, "FillRecord.execution_time_utc");
@@ -168,7 +171,9 @@ export function validateFillRecord(fill) {
 }
 
 export function validateEvidenceEvent(record) {
-  requireFields(record, ["schema_version", "run_id", "sequence", "event_type", "recorded_at_utc", "payload", "prev_record_hash", "record_hash"], "EvidenceEvent");
+  const fields = ["schema_version", "run_id", "sequence", "event_type", "recorded_at_utc", "payload", "prev_record_hash", "record_hash"];
+  requireFields(record, fields, "EvidenceEvent");
+  rejectUnknownFields(record, fields, "EvidenceEvent");
   assert(record.schema_version === "evidence-event.v1", "EvidenceEvent schema_version must be evidence-event.v1");
   assertString(record.run_id, "EvidenceEvent.run_id");
   assert(Number.isInteger(record.sequence) && record.sequence >= 0, "EvidenceEvent.sequence must be a non-negative integer");

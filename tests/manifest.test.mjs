@@ -26,3 +26,10 @@ test("run manifest rejects missing versioning metadata", async () => {
   delete manifest.model.adapter_version;
   assert.throws(() => validateRunManifest(manifest), /adapter_version/u);
 });
+
+
+test("run manifest rejects unknown properties inside closed nested structures", async () => {
+  const manifest = await loadManifest();
+  manifest.source.coverage.unmodeled_field = "must-fail";
+  assert.throws(() => validateRunManifest(manifest), /RunManifest\.source\.coverage contains unknown field: unmodeled_field/u);
+});

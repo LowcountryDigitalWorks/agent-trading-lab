@@ -13,6 +13,20 @@ test("CandidateEnvelope v1 fixture conforms to the runtime contract", async () =
   assert.equal(validateCandidateEnvelope(candidate), candidate);
 });
 
+
+test("CandidateEnvelope rejects unknown top-level properties", async () => {
+  const candidate = await fixture("candidate-envelope.v1.json");
+  candidate.unmodeled_field = "must-fail";
+  assert.throws(() => validateCandidateEnvelope(candidate), /unknown field: unmodeled_field/u);
+});
+
+test("CandidateEnvelope preserves intentionally open feature and context-ref properties", async () => {
+  const candidate = await fixture("candidate-envelope.v1.json");
+  candidate.features[0].source_note = "allowed-by-schema";
+  candidate.context_refs[0].publication_kind = "synthetic";
+  assert.equal(validateCandidateEnvelope(candidate), candidate);
+});
+
 test("CandidateEnvelope rejects features that were unavailable at the cutoff", async () => {
   const candidate = await fixture("candidate-envelope.v1.json");
   candidate.features[0].available_at_utc = "2026-01-01T12:00:01Z";
