@@ -66,15 +66,16 @@ export function buildSignalRows(pair, candles1h) {
 }
 
 export function nextExecutionBar(candles5m, decisionMs, latencyBars = 0) {
+  if (!Number.isInteger(latencyBars) || latencyBars < 0) fail("latencyBars must be a non-negative integer");
+  const targetMs = decisionMs + TIMEFRAME_MS["5m"] * (latencyBars + 1);
   let low = 0;
   let high = candles5m.length;
   while (low < high) {
     const middle = Math.floor((low + high) / 2);
-    if (candles5m[middle].timestamp_ms <= decisionMs) low = middle + 1;
+    if (candles5m[middle].timestamp_ms < targetMs) low = middle + 1;
     else high = middle;
   }
-  const index = low + latencyBars;
-  return index < candles5m.length ? candles5m[index] : null;
+  return low < candles5m.length && candles5m[low].timestamp_ms === targetMs ? candles5m[low] : null;
 }
 
 export function executionTerms(side, referencePrice, quantity, costs) {

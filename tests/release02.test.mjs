@@ -131,12 +131,16 @@ test("signal decision occurs at 1h close and future candle changes do not alter 
   assert.deepEqual(rows.slice(0, -1), rerun.slice(0, -1));
 });
 
-test("execution alignment uses first 5m bar strictly after decision and stress adds one bar", () => {
+test("execution alignment requires exact nominal and stress 5m buckets", () => {
   const decision = PROOF_START_MS + TIMEFRAME_MS["1h"];
-  const bars = [0, 5, 10, 65, 70].map((minutes) => ({ timestamp_ms: PROOF_START_MS + minutes * 60_000, open: 100 }));
-  assert.equal(nextExecutionBar(bars, decision, 0).timestamp_ms, PROOF_START_MS + 65 * 60_000);
-  assert.equal(nextExecutionBar(bars, decision, 1).timestamp_ms, PROOF_START_MS + 70 * 60_000);
-  assert.equal(nextExecutionBar([{ timestamp_ms: decision, open: 100 }], decision, 0), null);
+  const completeBars = [0, 5, 10, 65, 70].map((minutes) => ({ timestamp_ms: PROOF_START_MS + minutes * 60_000, open: 100 }));
+  assert.equal(nextExecutionBar(completeBars, decision, 0).timestamp_ms, PROOF_START_MS + 65 * 60_000);
+  assert.equal(nextExecutionBar(completeBars, decision, 1).timestamp_ms, PROOF_START_MS + 70 * 60_000);
+
+  const missingStressBucket = [65, 75].map((minutes) => ({ timestamp_ms: PROOF_START_MS + minutes * 60_000, open: 100 }));
+  assert.equal(nextExecutionBar(missingStressBucket, decision, 0).timestamp_ms, PROOF_START_MS + 65 * 60_000);
+  assert.equal(nextExecutionBar(missingStressBucket, decision, 1), null);
+  assert.equal(missingStressBucket[1].timestamp_ms, PROOF_START_MS + 75 * 60_000);
 });
 
 test("nominal and stress cost terms match frozen bps and are monotonic", () => {
@@ -188,4 +192,32 @@ test("replay maps missing execution data to rejected SKIP gate", () => {
   const proof = runPhase0AProof(datasets);
   assert.ok(proof.nominal.metrics.rejection_reasons.missing_execution_data > 0);
   assert.ok(proof.nominal.evidence.some((record) => record.event_type === "gate" && record.payload.reason_code === "missing_execution_data" && record.payload.action === "SKIP"));
+});
+
+test("stress replay fails closed when exact T+10m bucket is missing even if T+15m exists", () => {
+  const datasets = fixtureDatasets();
+  const pair = "BTC/USDT";
+  const signal = buildSignalRows(pair, datasets[pair].candles1h).find((row) => row.transition === "bullish");
+  assert.ok(signal);
+
+  const nominalTarget = signal.decision_ms + TIMEFRAME_MS["5m"];
+  const stressTarget = signal.decision_ms + 2 * TIMEFRAME_MS["5m"];
+  const laterAvailable = signal.decision_ms + 3 * TIMEFRAME_MS["5m"];
+  assert.ok(datasets[pair].candles5m.some((bar) => bar.timestamp_ms === nominalTarget));
+  assert.ok(datasets[pair].candles5m.some((bar) => bar.timestamp_ms === stressTarget));
+  assert.ok(datasets[pair].candles5m.some((bar) => bar.timestamp_ms === laterAvailable));
+
+  datasets[pair].candles5m = datasets[pair].candles5m.filter((bar) => bar.timestamp_ms !== stressTarget);
+  datasets[pair].quoteVolume5m.delete(stressTarget);
+
+  const proof = runPhase0AProof(datasets);
+  const candidateId = `${pair}@${new Date(signal.decision_ms).toISOString()}`;
+  const stressGate = proof.stress.evidence.find(
+    (record) => record.event_type === "gate" && record.payload.candidate_id === candidateId,
+  );
+
+  assert.ok(stressGate);
+  assert.equal(stressGate.payload.reason_code, "missing_execution_data");
+  assert.equal(stressGate.payload.action, "SKIP");
+  assert.ok(datasets[pair].candles5m.some((bar) => bar.timestamp_ms === laterAvailable));
 });

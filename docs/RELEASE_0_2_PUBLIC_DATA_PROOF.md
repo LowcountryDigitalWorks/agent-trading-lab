@@ -24,7 +24,7 @@ The liquidity gate does **not** approximate quote volume as base-volume × close
 
 The control uses closed 1h candles only. EMA20 and EMA50 use no future candles. A bullish transition while flat requests BUY; a bearish transition while holding requests SELL; otherwise the action is HOLD. There is no pyramiding and at most one position per asset.
 
-The decision timestamp is the 1h candle close. Nominal execution uses the first 5m bar strictly after that timestamp; stress adds one more 5m bar. Missing execution data fails closed to SKIP. The 5m bar open is the historical reference price, avoiding invented intra-candle ordering.
+The decision timestamp is the 1h candle close. On the frozen aligned 5m grid, nominal execution requires exactly T+5m and stress requires exactly T+10m. If that exact required bucket is absent, execution fails closed to SKIP; a later available candle is never substituted. The 5m bar open is the historical reference price, avoiding invented intra-candle ordering.
 
 Virtual risk is fixed at 10,000 starting units, 10% entry stake, 20% maximum aggregate exposure, a 2% UTC-day start-equity loss gate, and a 10% hard experiment drawdown gate. Loss/drawdown gates stop new entries while still allowing deterministic exits that reduce exposure.
 
