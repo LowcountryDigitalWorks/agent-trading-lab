@@ -33,14 +33,14 @@ export function emaSeries(candles, period) {
   return output;
 }
 
-export function buildSignalRows(pair, candles1h) {
+export function buildSignalRows(pair, candles1h, proofEndMs = PROOF_END_MS) {
   const ema20 = emaSeries(candles1h, 20);
   const ema50 = emaSeries(candles1h, 50);
   const rows = [];
   for (let index = 50; index < candles1h.length; index += 1) {
     const candle = candles1h[index];
     const decisionMs = candle.timestamp_ms + TIMEFRAME_MS["1h"];
-    if (decisionMs >= PROOF_END_MS) break;
+    if (decisionMs >= proofEndMs) break;
     const previous20 = ema20[index - 1];
     const previous50 = ema50[index - 1];
     const current20 = ema20[index];
@@ -160,7 +160,7 @@ function appendEvidence(records, runId, eventType, payload, recordedAtUtc) {
   }));
 }
 
-function createCandidate(signal, dataset, existingPosition) {
+function createCandidate(signal, dataset, existingPosition, experimentId = "phase0a-kraken-2026-08") {
   const decisionUtc = iso(signal.decision_ms);
   const stateMaterial = {
     pair: signal.pair,
@@ -177,7 +177,7 @@ function createCandidate(signal, dataset, existingPosition) {
   };
   const candidate = {
     schema_version: "candidate-envelope.v1",
-    experiment_id: "phase0a-kraken-2026-08",
+    experiment_id: experimentId,
     track: "0A",
     candidate_id: `${signal.pair}@${decisionUtc}`,
     event_time_utc: iso(signal.signal_candle_open_ms),
@@ -208,12 +208,12 @@ function createCandidate(signal, dataset, existingPosition) {
   return validateCandidateEnvelope(candidate);
 }
 
-function createDecision(candidate, action, transition) {
+function createDecision(candidate, action, transition, adapterVersion = "0.2.0") {
   const output = { action, transition };
   const decision = {
     candidate_id: candidate.candidate_id,
     adapter_id: "phase0a-ema20-ema50",
-    adapter_version: "0.2.0",
+    adapter_version: adapterVersion,
     action,
     instrument_side: null,
     p_yes: null,
@@ -274,14 +274,54 @@ function finalMark(state, datasets) {
   return value;
 }
 
-export function replayPhase0A(datasets, costs) {
+function normalizeReplayConfig(config = {}) {
+  const entryStakeFraction = config.entryStakeFraction ?? ENTRY_STAKE_FRACTION;
+  if (typeof entryStakeFraction !== "number" || !Number.isFinite(entryStakeFraction) || entryStakeFraction <= 0 || entryStakeFraction > MAX_EXPOSURE_FRACTION) {
+    fail("entryStakeFraction must be finite, positive, and <= the aggregate exposure ceiling");
+  }
+  const proofStartUtc = config.proofStartUtc ?? PROOF_START_UTC;
+  const proofEndUtc = config.proofEndUtc ?? PROOF_END_UTC;
+  const proofStartMs = Date.parse(proofStartUtc);
+  const proofEndMs = Date.parse(proofEndUtc);
+  if (!proofStartUtc.endsWith("Z") || !proofEndUtc.endsWith("Z") || Number.isNaN(proofStartMs) || Number.isNaN(proofEndMs) || proofStartMs >= proofEndMs) {
+    fail("replay proof window must be valid UTC ISO timestamps with start before end");
+  }
+  return {
+    entryStakeFraction,
+    proofStartUtc,
+    proofEndUtc,
+    proofStartMs,
+    proofEndMs,
+    experimentId: config.experimentId ?? "phase0a-kraken-2026-08",
+    adapterVersion: config.adapterVersion ?? "0.2.0",
+    runId: config.runId ?? null,
+    signals: config.signals ?? null,
+    includeLifecycleMetrics: Boolean(config.includeLifecycleMetrics),
+    signalStreamDigest: config.signalStreamDigest ?? null,
+  };
+}
+
+export function replayPhase0A(datasets, costs, config = {}) {
   assertCostModelMonotonic();
+  const replayConfig = normalizeReplayConfig(config);
   const pairs = Object.keys(datasets).sort();
-  const signals = pairs.flatMap((pair) => buildSignalRows(pair, datasets[pair].candles1h));
+  const sourceSignals = replayConfig.signals ?? pairs.flatMap(
+    (pair) => buildSignalRows(pair, datasets[pair].candles1h, replayConfig.proofEndMs),
+  );
+  const signals = sourceSignals.map((signal) => ({ ...signal }));
   signals.sort((left, right) => left.decision_ms - right.decision_ms || left.pair.localeCompare(right.pair));
-  const runId = `phase0a-${costs.name}-kraken-2026-08`;
+  const runId = replayConfig.runId ?? `phase0a-${costs.name}-kraken-2026-08`;
   const evidence = [];
-  appendEvidence(evidence, runId, "run_started", { scenario: costs.name, proof_window: { start_utc: PROOF_START_UTC, end_utc: PROOF_END_UTC } }, PROOF_START_UTC);
+  const runStarted = {
+    scenario: costs.name,
+    proof_window: { start_utc: replayConfig.proofStartUtc, end_utc: replayConfig.proofEndUtc },
+  };
+  if (config.entryStakeFraction !== undefined || replayConfig.includeLifecycleMetrics) {
+    runStarted.entry_stake_fraction = replayConfig.entryStakeFraction;
+  }
+  if (replayConfig.signalStreamDigest) runStarted.signal_stream_digest = replayConfig.signalStreamDigest;
+  appendEvidence(evidence, runId, "run_started", runStarted, replayConfig.proofStartUtc);
+
   const state = {
     cash: STARTING_EQUITY,
     positions: Object.fromEntries(pairs.map((pair) => [pair, null])),
@@ -300,6 +340,18 @@ export function replayPhase0A(datasets, costs) {
   let rejectedActionCount = 0;
   const rejectionReasons = {};
   const equityCurve = [];
+  const entryOpportunities = [];
+  const stateTransitions = [];
+  const lifecycle = {
+    actionable_signal_opportunities: signals.filter((signal) => signal.transition !== "none").length,
+    attempted_entries: 0,
+    accepted_entries: 0,
+    rejected_entries: 0,
+    attempted_exits: 0,
+    accepted_exits: 0,
+    rejected_exits: 0,
+    complete_round_trips: 0,
+  };
 
   for (const signal of signals) {
     const currentEquity = markPortfolio(state, datasets, signal.decision_ms);
@@ -320,19 +372,49 @@ export function replayPhase0A(datasets, costs) {
     equityCurve.push({ timestamp_utc: iso(signal.decision_ms), equity: currentEquity });
 
     const existingPosition = Boolean(state.positions[signal.pair]);
-    const candidate = createCandidate(signal, datasets[signal.pair], existingPosition);
+    const candidate = createCandidate(signal, datasets[signal.pair], existingPosition, replayConfig.experimentId);
     let desiredAction = "HOLD";
     if (signal.transition === "bullish" && !existingPosition) desiredAction = "BUY";
     else if (signal.transition === "bearish" && existingPosition) desiredAction = "SELL";
-    const decision = createDecision(candidate, desiredAction, signal.transition);
+    const decision = createDecision(candidate, desiredAction, signal.transition, replayConfig.adapterVersion);
     appendEvidence(evidence, runId, "candidate", candidate, candidate.decision_time_utc);
     appendEvidence(evidence, runId, "decision", decision, candidate.decision_time_utc);
+
+    let entryOpportunity = null;
+    if (signal.transition === "bullish") {
+      const targetMs = signal.decision_ms + TIMEFRAME_MS["5m"] * (costs.latency_bars + 1);
+      const targetBar = nextExecutionBar(datasets[signal.pair].candles5m, signal.decision_ms, costs.latency_bars);
+      const quoteVolume = targetBar ? datasets[signal.pair].quoteVolume5m.get(targetBar.timestamp_ms) ?? 0 : null;
+      const desiredOrderNotional = currentEquity * replayConfig.entryStakeFraction;
+      let liquidityResult = "not_evaluated_position_open";
+      if (!existingPosition) {
+        if (!targetBar) liquidityResult = "missing_execution_data";
+        else if (!(quoteVolume > 0)) liquidityResult = "missing_quote_volume";
+        else if (desiredOrderNotional > quoteVolume * LIQUIDITY_FRACTION) liquidityResult = "liquidity_limit";
+        else liquidityResult = "pass";
+      }
+      entryOpportunity = {
+        opportunity_id: `${signal.pair}@${iso(signal.decision_ms)}`,
+        pair: signal.pair,
+        decision_time_utc: iso(signal.decision_ms),
+        required_execution_time_utc: iso(targetMs),
+        execution_bucket_available: Boolean(targetBar),
+        execution_bucket_quote_volume: quoteVolume,
+        desired_order_notional: desiredOrderNotional,
+        existing_position: existingPosition,
+        liquidity_result: liquidityResult,
+        entry_result: existingPosition ? "position_open_no_entry" : null,
+      };
+    }
 
     let gate;
     let fill = null;
     if (desiredAction === "HOLD") {
       gate = createGate(decision, true, "HOLD", "no_transition_action");
     } else {
+      if (desiredAction === "BUY") lifecycle.attempted_entries += 1;
+      else lifecycle.attempted_exits += 1;
+
       const bar = nextExecutionBar(datasets[signal.pair].candles5m, signal.decision_ms, costs.latency_bars);
       let rejectReason = null;
       let rejectDetail = null;
@@ -341,7 +423,7 @@ export function replayPhase0A(datasets, costs) {
       } else {
         const quoteVolume = datasets[signal.pair].quoteVolume5m.get(bar.timestamp_ms) ?? 0;
         const position = state.positions[signal.pair];
-        const desiredNotional = desiredAction === "BUY" ? currentEquity * ENTRY_STAKE_FRACTION : position.quantity * bar.open;
+        const desiredNotional = desiredAction === "BUY" ? currentEquity * replayConfig.entryStakeFraction : position.quantity * bar.open;
         if (!(quoteVolume > 0)) {
           rejectReason = "missing_quote_volume";
         } else if (desiredNotional > quoteVolume * LIQUIDITY_FRACTION) {
@@ -360,7 +442,7 @@ export function replayPhase0A(datasets, costs) {
 
         if (!rejectReason) {
           const position = state.positions[signal.pair];
-          const quantity = desiredAction === "BUY" ? (currentEquity * ENTRY_STAKE_FRACTION) / bar.open : position.quantity;
+          const quantity = desiredAction === "BUY" ? (currentEquity * replayConfig.entryStakeFraction) / bar.open : position.quantity;
           const terms = executionTerms(desiredAction, bar.open, quantity, costs);
           fill = createFill({
             candidateId: candidate.candidate_id,
@@ -372,26 +454,74 @@ export function replayPhase0A(datasets, costs) {
             scenario: costs.name,
             sourceHash: datasets[signal.pair].hashes.normalized_5m,
           });
+          const cashBefore = state.cash;
+          const positionBefore = state.positions[signal.pair] ? { ...state.positions[signal.pair] } : null;
           const referenceNotional = quantity * bar.open;
           turnover += referenceNotional;
           executionCostDrag += terms.totalCostDrag;
           if (desiredAction === "BUY") {
             state.cash -= quantity * terms.effectivePrice + terms.fee;
-            state.positions[signal.pair] = { quantity, entry_reference_price: bar.open, entry_effective_price: terms.effectivePrice, entered_at_utc: fill.execution_time_utc };
+            state.positions[signal.pair] = {
+              quantity,
+              entry_reference_price: bar.open,
+              entry_effective_price: terms.effectivePrice,
+              entered_at_utc: fill.execution_time_utc,
+            };
+            lifecycle.accepted_entries += 1;
           } else {
             state.cash += quantity * terms.effectivePrice - terms.fee;
             state.positions[signal.pair] = null;
+            lifecycle.accepted_exits += 1;
+            lifecycle.complete_round_trips += 1;
           }
           fillCount += 1;
           gate = createGate(decision, true, desiredAction, "accepted");
+
+          const equityAfter = markPortfolio(state, datasets, signal.decision_ms);
+          const exposureAfter = exposureAtDecision(state, datasets, signal.decision_ms);
+          const transition = {
+            candidate_id: candidate.candidate_id,
+            pair: signal.pair,
+            side: desiredAction,
+            execution_time_utc: fill.execution_time_utc,
+            cash_before: cashBefore,
+            cash_after: state.cash,
+            position_before: positionBefore,
+            position_after: state.positions[signal.pair] ? { ...state.positions[signal.pair] } : null,
+            equity_before: currentEquity,
+            equity_after: equityAfter,
+            exposure_before: currentExposure,
+            exposure_after: exposureAfter,
+            execution_cost_drag: terms.totalCostDrag,
+          };
+          stateTransitions.push(transition);
+          if (replayConfig.includeLifecycleMetrics) {
+            appendEvidence(
+              evidence,
+              runId,
+              "metric",
+              { metric_kind: "portfolio_transition", ...transition },
+              fill.execution_time_utc,
+            );
+          }
         }
       }
       if (rejectReason) {
         rejectedActionCount += 1;
         rejectionReasons[rejectReason] = (rejectionReasons[rejectReason] ?? 0) + 1;
+        if (desiredAction === "BUY") lifecycle.rejected_entries += 1;
+        else lifecycle.rejected_exits += 1;
         gate = createGate(decision, false, "SKIP", rejectReason, rejectDetail);
       }
     }
+
+    if (entryOpportunity) {
+      if (!existingPosition) {
+        entryOpportunity.entry_result = fill?.side === "BUY" ? "accepted" : gate.reason_code;
+      }
+      entryOpportunities.push(entryOpportunity);
+    }
+
     appendEvidence(evidence, runId, "gate", gate, candidate.decision_time_utc);
     if (fill) appendEvidence(evidence, runId, "fill", fill, fill.execution_time_utc);
   }
@@ -419,20 +549,40 @@ export function replayPhase0A(datasets, costs) {
     open_positions_at_end: Object.entries(state.positions).filter(([, position]) => Boolean(position)).map(([pair]) => pair),
     rejection_reasons: rejectionReasons,
   };
-  appendEvidence(evidence, runId, "metric", metrics, PROOF_END_UTC);
-  appendEvidence(evidence, runId, "run_closed", { scenario: costs.name, status: "completed" }, PROOF_END_UTC);
+  if (replayConfig.includeLifecycleMetrics) {
+    Object.assign(metrics, {
+      entry_stake_fraction: replayConfig.entryStakeFraction,
+      ...lifecycle,
+      fill_path_coverage: (lifecycle.attempted_entries + lifecycle.attempted_exits) === 0
+        ? 0
+        : fillCount / (lifecycle.attempted_entries + lifecycle.attempted_exits),
+      cash_transition_count: stateTransitions.length,
+      position_transition_count: stateTransitions.length,
+      equity_transition_count: stateTransitions.length,
+      exposure_transition_count: stateTransitions.length,
+    });
+  }
+  appendEvidence(evidence, runId, "metric", metrics, replayConfig.proofEndUtc);
+  const runClosed = { scenario: costs.name, status: "completed" };
+  if (config.entryStakeFraction !== undefined || replayConfig.includeLifecycleMetrics) {
+    runClosed.entry_stake_fraction = replayConfig.entryStakeFraction;
+  }
+  appendEvidence(evidence, runId, "run_closed", runClosed, replayConfig.proofEndUtc);
   validateLedgerRecords(evidence);
   return {
     metrics: { ...metrics, evidence_count: evidence.length },
     evidence,
     evidence_digest: canonicalLedgerDigest(evidence),
     equity_curve: equityCurve,
+    entry_opportunities: entryOpportunities,
+    state_transitions: stateTransitions,
+    signals,
   };
 }
 
-export function runPhase0AProof(datasets) {
-  const nominal = replayPhase0A(datasets, NOMINAL_COSTS);
-  const stress = replayPhase0A(datasets, STRESS_COSTS);
+export function runPhase0AProof(datasets, config = {}) {
+  const nominal = replayPhase0A(datasets, NOMINAL_COSTS, config);
+  const stress = replayPhase0A(datasets, STRESS_COSTS, config);
   return {
     nominal,
     stress,

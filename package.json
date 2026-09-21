@@ -1,8 +1,8 @@
 {
   "name": "@lowcountrydigitalworks/agent-trading-lab",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
-  "description": "Deterministic public-data measurement integration for the Lowcountry Digital Works Agent Trading Lab.",
+  "description": "Deterministic Phase 0A executability sensitivity for the Lowcountry Digital Works Agent Trading Lab.",
   "type": "module",
   "engines": {
     "node": ">=22"
