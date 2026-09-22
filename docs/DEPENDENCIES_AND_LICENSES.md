@@ -27,3 +27,8 @@ Release 0.2 resolves Freqtrade tag `2026.8` (upstream commit `9f10e357a93c1dcf10
 
 The repository still has zero npm runtime dependencies and zero npm development dependencies. The one-time public-data workflow pins the Freqtrade container by digest and uses only public Kraken historical data. Raw downloaded market data is not committed or uploaded as the retained proof artifact.
 
+## Release 0.3
+
+Release 0.3 adds no npm runtime or development dependencies. It reuses the pinned Freqtrade 2026.8 external GPLv3 CLI/file-artifact boundary and does not copy, import, vendor, link or redistribute Freqtrade implementation code.
+
+The controlled proof acquires only public Kraken historical data and retains sanitized manifests, hashes, signal/scale diagnostics, metrics and evidence ledgers. Raw downloaded market data is not committed or retained in the proof artifact.

@@ -2,7 +2,7 @@
 
 Agent Trading Lab is a Lowcountry Digital Works experimental research repository for measuring whether bounded decision layers add value over deterministic baselines under identical evidence and risk assumptions.
 
-Release 0.1 established the deterministic measurement contracts and evidence ledger. **Release 0.2 adds only the authorized Phase 0A public-data measurement integration**: Freqtrade `2026.8` as an external CLI/file-artifact source, Kraken public historical trades for BTC/USDT and ETH/USDT, deterministic 5m/1h normalization, EMA20/EMA50 control replay, fixed risk/cost/liquidity rules, and reproducible evidence.
+Release 0.1 established deterministic measurement contracts and the evidence ledger. Release 0.2 proved the public-data measurement integration. **Release 0.3 adds only the authorized Phase 0A executability sensitivity**: the canonical 10% stake is paired with one predeclared 1% engineering sensitivity on one shared May-August Kraken public dataset, with every Release 0.2 liquidity, execution, cost, risk and evidence invariant preserved.
 
 This is a measurement/integration proof, **not an alpha claim**. It contains no external AI/model calls, prediction-market ingestion, exchange account or authenticated API access, paper/live order connectivity, wallets/signing, customer functionality, paid services, or real-capital path.
 
@@ -30,3 +30,11 @@ npm run verify
 ```
 
 See [the Release 0.2 public-data proof contract](docs/RELEASE_0_2_PUBLIC_DATA_PROOF.md), [the experiment contract](docs/EXPERIMENT_CONTRACT.md), [architecture notes](docs/ARCHITECTURE.md), and [dependency/license boundary](docs/DEPENDENCIES_AND_LICENSES.md).
+
+## Release 0.3 executability sensitivity
+
+Release 0.3 uses one acquisition/normalization dataset for both stake variants and records a stake-independent signal-stream digest plus paired scale-conversion diagnostics. It produces four scenarios: 10% nominal, 10% stress, 1% nominal, and 1% stress. A scale-conversion entry is counted only when the 10% control is rejected for `liquidity_limit` while the 1% sensitivity is accepted on the same signal opportunity and exact execution bucket.
+
+The frozen engineering coverage window is 2026-05-01 through 2026-08-01 UTC, end exclusive. The 1% value is not a new default, and the window is not strategy-edge/OOS evidence. FULL PASS, PARTIAL PASS and NEGATIVE are all valid engineering outcomes; no result authorizes an automatic second sensitivity.
+
+See [Release 0.3 executability sensitivity](docs/RELEASE_0_3_EXECUTABILITY_SENSITIVITY.md).

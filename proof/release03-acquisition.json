@@ -1,0 +1,27 @@
+{
+  "release": "0.3",
+  "purpose": "Phase 0A engineering executability sensitivity; not strategy-alpha evidence",
+  "freqtrade": {
+    "tag": "2026.8",
+    "tag_commit": "9f10e357a93c1dcf10c2a2b367659214d89c073e",
+    "docker_index_digest": "sha256:4d23160b501d2b34579e76f57ad75edfa274967cd0dd824ff1c1b86d8c166ab4",
+    "license_boundary": "GPLv3 external CLI/file-artifact only"
+  },
+  "source": {
+    "exchange": "kraken",
+    "trading_mode": "spot",
+    "pairs": ["BTC/USDT", "ETH/USDT"],
+    "window_start_utc": "2026-05-01T00:00:00Z",
+    "window_end_exclusive_utc": "2026-08-01T00:00:00Z",
+    "public_only": true,
+    "authenticated_access": false
+  },
+  "stakes": {
+    "canonical_control": 0.1,
+    "engineering_sensitivity": 0.01
+  },
+  "acquisition": {
+    "command": "freqtrade download-data --exchange kraken --pairs BTC/USDT ETH/USDT --timerange 20260501-20260801 --dl-trades --convert --timeframes 5m 1h --trading-mode spot --data-format-ohlcv json --data-format-trades json --datadir /freqtrade/proof-data",
+    "single_acquisition_for_both_stakes": true
+  }
+}

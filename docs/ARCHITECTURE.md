@@ -34,3 +34,10 @@ Freqtrade remains outside the LDW-authored runtime dependency graph. Routine CI 
 
 Quote volume for the liquidity gate is derived from the public trade artifact as `sum(price * amount)` per 5m bucket. Decisions occur only after 1h candle close; nominal execution uses the first 5m bar strictly after the decision and stress adds one 5m bar.
 
+## Release 0.3 paired executability layer
+
+Release 0.3 parameterizes entry stake without changing the canonical 10% default. The shared normalized May-August dataset is converted once into a deterministic stake-independent signal stream. The same signal rows feed 10% control and 1% sensitivity replays under nominal and stress execution.
+
+The signal-stream digest covers source hashes, closed-1h EMA state, transitions, exact T+5m/T+10m execution-bucket identity, bucket availability and quote volume. Downstream portfolio state is intentionally allowed to diverge after stake-dependent accept/reject outcomes.
+
+Scale-conversion diagnostics pair bullish entry opportunities by stake-independent opportunity ID and execution timestamp. They never infer causality from aggregate fill counts alone.

@@ -72,3 +72,11 @@ Release 0.2 implements only the frozen Phase 0A measurement integration describe
 
 The Phase 0A replay uses closed 1h EMA20/EMA50 transitions, nominal first-eligible-5m execution strictly after decision close, the accepted nominal/stress costs, the accepted virtual risk envelope, and a quote-volume liquidity gate derived from public trade cost `price * amount`. This remains a measurement proof and not an alpha claim.
 
+## Release 0.3 engineering sensitivity
+
+Release 0.3 does not change the Phase 0A strategy, execution, liquidity, cost, or risk contract. It parameterizes entry stake so the canonical 10% control and one predeclared 1% engineering sensitivity can be replayed against one shared 2026-05-01 through 2026-08-01 public-data normalization set.
+
+The two variants share a deterministic stake-independent signal-stream digest. Portfolio state may diverge after stake-dependent accept/reject outcomes, so downstream CandidateEnvelope state hashes and position-dependent decisions are not required to remain identical.
+
+A scale-conversion entry is recognized only when the 10% control is rejected for `liquidity_limit` and the 1% sensitivity is accepted on the same bullish signal opportunity and exact execution bucket. FULL PASS, PARTIAL PASS, and NEGATIVE are all valid engineering classifications. P&L is secondary diagnostic output and not strategy-edge evidence.
+

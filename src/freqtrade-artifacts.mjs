@@ -6,6 +6,10 @@ export const PROOF_START_UTC = "2026-08-01T00:00:00.000Z";
 export const PROOF_END_UTC = "2026-09-01T00:00:00.000Z";
 export const PROOF_START_MS = Date.parse(PROOF_START_UTC);
 export const PROOF_END_MS = Date.parse(PROOF_END_UTC);
+export const RELEASE03_START_UTC = "2026-05-01T00:00:00.000Z";
+export const RELEASE03_END_UTC = "2026-08-01T00:00:00.000Z";
+export const RELEASE03_START_MS = Date.parse(RELEASE03_START_UTC);
+export const RELEASE03_END_MS = Date.parse(RELEASE03_END_UTC);
 export const PAIRS = Object.freeze(["BTC/USDT", "ETH/USDT"]);
 export const TIMEFRAME_MS = Object.freeze({ "5m": 5 * 60 * 1000, "1h": 60 * 60 * 1000 });
 
@@ -45,7 +49,9 @@ function assertPair(pair) {
 }
 
 function assertWindow(startMs, endMs) {
-  if (startMs !== PROOF_START_MS || endMs !== PROOF_END_MS) {
+  const release02 = startMs === PROOF_START_MS && endMs === PROOF_END_MS;
+  const release03 = startMs === RELEASE03_START_MS && endMs === RELEASE03_END_MS;
+  if (!release02 && !release03) {
     fail(`unexpected proof window: ${iso(startMs)} through ${iso(endMs)}`);
   }
 }
@@ -234,7 +240,11 @@ function findExactlyOne(files, expectedName) {
   return matches[0];
 }
 
-export async function loadFreqtradeProofArtifacts(dataDirectory) {
+export async function loadFreqtradeProofArtifacts(
+  dataDirectory,
+  { startMs = PROOF_START_MS, endMs = PROOF_END_MS } = {},
+) {
+  assertWindow(startMs, endMs);
   const files = await walk(dataDirectory);
   const datasets = {};
   const rawInputs = [];
@@ -258,9 +268,9 @@ export async function loadFreqtradeProofArtifacts(dataDirectory) {
       { name: basename(fivePath), sha256: fiveHash },
       { name: basename(hourPath), sha256: hourHash },
     );
-    const trades = parseFreqtradeTradesJson(tradeText, { pair });
-    const five = parseFreqtradeOhlcvJson(fiveText, { pair, timeframe: "5m" });
-    const hour = parseFreqtradeOhlcvJson(hourText, { pair, timeframe: "1h" });
+    const trades = parseFreqtradeTradesJson(tradeText, { pair, startMs, endMs });
+    const five = parseFreqtradeOhlcvJson(fiveText, { pair, timeframe: "5m", startMs, endMs });
+    const hour = parseFreqtradeOhlcvJson(hourText, { pair, timeframe: "1h", startMs, endMs });
     const quote = deriveQuoteVolume5m(trades.trades);
     const normalizedFiveHash = sha256Hex(canonicalSerialize(five.candles));
     const normalizedHourHash = sha256Hex(canonicalSerialize(hour.candles));
