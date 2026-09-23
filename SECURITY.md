@@ -2,9 +2,9 @@
 
 ## Scope
 
-Release 0.4 is a deterministic forecast-research scaffold. Routine CI is offline and synthetic. The separately gated one-time source-qualification proof may issue only bounded unauthenticated public GET requests to the official Kalshi market-data REST API.
+Release 0.5 is an offline, deterministic source-contract scaffold. Routine CI uses only synthetic fixtures. **No operational CryptoStruct Data access is authorized** until a separate owner-license acceptance record and bounded live-proof authorization exist.
 
-No secrets, API tokens, trading credentials, accounts, wallets, private keys, MFA/recovery material, customer data, PHI, CUI, payment data, or private LDW content are authorized.
+No secrets, API tokens, trading credentials, accounts, OAuth grants, wallets, private keys, MFA/recovery material, customer data, PHI, CUI, payment data, or private LDW content are authorized.
 
 There is no authorized path from a Phase 0B forecast record to real money, an order, a paper trade, or a position.
 
@@ -14,9 +14,11 @@ Do not open a public issue containing a secret or sensitive record. Report secur
 
 ## Security invariants
 
-- No authenticated Kalshi endpoint, API key, account creation, trading endpoint, order submission, wallet, or signing.
-- No Gemini/OpenAI/Jev/other external model call or model credential in Release 0.4.
-- Raw live Kalshi response bodies and bulk external market archives are not retained in the public repository or proof artifact.
+- No real CryptoStruct MCP/API data-returning call before the separate owner legal gate.
+- No direct Polymarket/Kalshi call or fallback.
+- No account, OAuth, Premium/purchase, paid realtime, model provider/call, trading endpoint, order submission, wallet, or signing.
+- Public evidence must remain aggregate/non-reconstructive; raw CryptoStruct responses, per-market price datasets, full orderbooks, and reconstructive archives are prohibited.
+- Future treatment context is source-separated and excludes CryptoStruct/Polymarket identity and all provider-derived market statistics.
 - Secret scanning is part of CI.
 - Runtime and development dependencies remain intentionally zero.
-- Evidence integrity is append-only + hash-chained + tamper-evident, not WORM or immutable storage.
+- Evidence integrity reuses the existing append-only + hash-chained + tamper-evident EvidenceEvent contract; it is not WORM or immutable storage.

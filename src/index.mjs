@@ -1,5 +1,6 @@
 export * from "./canonical.mjs";
 export * from "./contracts.mjs";
+export * from "./cryptostruct-source.mjs";
 export * from "./evaluator.mjs";
 export * from "./freqtrade-artifacts.mjs";
 export * from "./ledger.mjs";

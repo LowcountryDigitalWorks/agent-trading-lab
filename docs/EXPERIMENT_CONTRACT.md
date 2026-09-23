@@ -96,3 +96,24 @@ Current Phase 0B is forecast-quality-first and forward-only. Release 0.4 impleme
 - no action threshold, portfolio sizing, trading execution or P&L gate in the initial Phase 0B experiment.
 
 Release 0.4 does not begin OOS-A, call a model or create a provider credential. Any future model-scored release remains separately gated.
+
+## Release 0.5 accepted CryptoStruct source contract
+
+Business-operations #263 / #269 replace the planned Phase 0B source boundary with **CryptoStruct keyless Free MCP/analytics**, initially using **Polymarket only through CryptoStruct**. Release 0.4's forecast metrics, OOS-A/OOS-B floors, event-cluster bootstrap, robustness tests, probability-stability contract, one-redesign maximum, and negative-result acceptance remain unchanged.
+
+For an eligible, unambiguously oriented binary YES/Up instrument:
+
+`p_control = get_market_snapshot.last_price`
+
+The value must be finite and within [0,1]. No Kalshi midpoint/reciprocal ask, synthetic ask, daily/hourly close, VWAP, later observation, or hindsight backfill may substitute for the scheduled snapshot.
+
+Each T-24h / T-6h / T-1h cutoff is independently eligible only when the frozen instrument remains open/unresolved and unchanged, binary orientation/provenance are unambiguous, request timing is exact and <= cutoff+60 seconds, `last_price` is valid, 60-minute trades >=5, 60-minute USD turnover >=100, top-1 USD depth >=50, spread is present/non-negative/<=2000 bps, and the independently frozen event/resolution criteria remain unchanged.
+
+One instrument is frozen at T-24h by turnover desc -> trades desc -> spread asc -> top-1 depth desc -> stable instrument ID lexical asc. Later source failure does not permit switching.
+
+IndependentEventSpec is mandatory before T-24h and must be established independently of CryptoStruct Data. It is also the future treatment-semantic source; CryptoStruct/Polymarket identity and provider-derived market statistics are prohibited from future treatment context.
+
+CryptoStruct/venue price is never authoritative resolution. Independent official authority evidence is required; unavailable/ambiguous/disputed/materially changed resolution is invalid/not scored.
+
+Release 0.5 is docs/synthetic-only until the separate owner license gate. No real CryptoStruct data-returning MCP/API call, model call, OOS collection, trading, or P&L is authorized by this candidate.
+

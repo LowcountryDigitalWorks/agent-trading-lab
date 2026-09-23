@@ -53,3 +53,18 @@ The source adapter performs decimal-safe top-of-book math from YES/NO bid ladder
 The OOS-A/OOS-B state machine, one-redesign rule, bootstrap, robustness and stability helpers define future evaluation mechanics without invoking a model.
 
 Routine CI remains synthetic/offline. The one live source-qualification workflow is explicitly marker-gated and retains only sanitized aggregate evidence, not raw Kalshi payloads.
+
+## Release 0.5 CryptoStruct source boundary
+
+Release 0.5 adds a provider-neutral prediction-market source adapter without changing the existing Phase 0B forecast/statistical harness:
+
+`IndependentEventSpec -> CryptoStruct source adapter -> Polymarket instrument orientation -> source-quality gate -> exact last_price p_control -> existing Phase 0B scoring/evidence`
+
+The adapter exposes provider-neutral `searchInstruments`, `getInstrument`, and `getMarketSnapshot` operations backed by an injected MCP tool-invocation function. The implementation itself contains no network client and is hard-gated with `OWNER_LICENSE_ACCEPTANCE_REQUIRED` unless a later caller explicitly supplies separately authorized operational access.
+
+The initial underlying venue is Polymarket only through CryptoStruct. Direct Polymarket/Kalshi access does not exist in this release.
+
+IndependentEventSpec is created before T-24h from independent sources and is the only semantic route to a future treatment model. CryptoStruct/venue identity, instrument identifiers, `last_price` / `p_control`, trade count, turnover, spread, depth, liquidity, and every other provider-derived statistic remain on the control/evidence side and are excluded from treatment context.
+
+Private cutoff evidence reuses the existing EvidenceEvent v1 hash chain. Public evidence is a separate sanitized aggregate schema and cannot contain per-market pricing/activity fields or reconstructive source data.
+

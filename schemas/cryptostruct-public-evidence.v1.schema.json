@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lowcountrydigitalworks.com/schemas/cryptostruct-public-evidence.v1.schema.json",
+  "title": "CryptoStruct sanitized public evidence v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "provider",
+    "underlying_venue",
+    "sample_records",
+    "eligible_records",
+    "ineligible_records",
+    "rejection_reasons",
+    "category_counts",
+    "source_contract_hash",
+    "qualification",
+    "raw_responses_retained",
+    "reconstructive_dataset_retained"
+  ],
+  "properties": {
+    "schema_version": { "const": "cryptostruct-public-evidence.v1" },
+    "provider": { "const": "cryptostruct" },
+    "underlying_venue": { "const": "polymarket" },
+    "sample_records": { "type": "integer", "minimum": 0 },
+    "eligible_records": { "type": "integer", "minimum": 0 },
+    "ineligible_records": { "type": "integer", "minimum": 0 },
+    "rejection_reasons": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+    "category_counts": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+    "source_contract_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "qualification": { "enum": ["QUALIFIED", "INSUFFICIENT", "BLOCKED"] },
+    "raw_responses_retained": { "const": false },
+    "reconstructive_dataset_retained": { "const": false }
+  }
+}
