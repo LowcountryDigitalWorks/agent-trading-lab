@@ -1,0 +1,45 @@
+name: Release 0.4 Kalshi Source Qualification
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+
+permissions:
+  contents: read
+
+jobs:
+  source-qualification:
+    if: contains(github.event.pull_request.body || '', 'RUN_RELEASE04_SOURCE_PROOF=1')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install repository
+        run: npm ci
+      - name: Run exactly one bounded public Kalshi source qualification
+        shell: bash
+        run: |
+          set -euo pipefail
+          started_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          node scripts/run-release04-source-proof.mjs \
+            --output-dir proof-output \
+            --git-commit '${{ github.event.pull_request.head.sha }}' \
+            --proof-started-at-utc "$started_at"
+      - name: Publish sanitized qualification evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-0.4-kalshi-source-qualification-${{ github.event.pull_request.head.sha }}
+          path: proof-output/
+          if-no-files-found: error
+          retention-days: 30

@@ -80,3 +80,19 @@ The two variants share a deterministic stake-independent signal-stream digest. P
 
 A scale-conversion entry is recognized only when the 10% control is rejected for `liquidity_limit` and the 1% sensitivity is accepted on the same bullish signal opportunity and exact execution bucket. FULL PASS, PARTIAL PASS, and NEGATIVE are all valid engineering classifications. P&L is secondary diagnostic output and not strategy-edge evidence.
 
+## Release 0.4 accepted Phase 0B supersession
+
+The accepted Phase 0B specification in business-operations #252 supersedes earlier placeholder Phase 0B action/P&L and percentage-partition language in this historical document.
+
+Current Phase 0B is forecast-quality-first and forward-only. Release 0.4 implements the deterministic forecast harness and Kalshi source qualification only:
+
+- one selected binary market per event;
+- market-midpoint `p_control` from YES/NO top bids;
+- T-24h/T-6h/T-1h planned cutoffs;
+- mock treatment only, with invalid/timeout/unavailable scoring fallback to control;
+- Brier, Brier Skill, log loss, calibration, clustered uncertainty and robustness diagnostics;
+- sequential non-overlapping OOS-A/OOS-B future cohorts with >=100 resolved events and >=300 paired decisions required independently;
+- exactly one treatment redesign only after evaluable OOS-A treatment-quality failure;
+- no action threshold, portfolio sizing, trading execution or P&L gate in the initial Phase 0B experiment.
+
+Release 0.4 does not begin OOS-A, call a model or create a provider credential. Any future model-scored release remains separately gated.

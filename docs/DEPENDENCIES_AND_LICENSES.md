@@ -32,3 +32,11 @@ The repository still has zero npm runtime dependencies and zero npm development 
 Release 0.3 adds no npm runtime or development dependencies. It reuses the pinned Freqtrade 2026.8 external GPLv3 CLI/file-artifact boundary and does not copy, import, vendor, link or redistribute Freqtrade implementation code.
 
 The controlled proof acquires only public Kraken historical data and retains sanitized manifests, hashes, signal/scale diagnostics, metrics and evidence ledgers. Raw downloaded market data is not committed or retained in the proof artifact.
+
+## Release 0.4
+
+Release 0.4 adds no npm runtime or development dependencies. The Kalshi integration uses Node.js built-in `fetch` against official public unauthenticated REST market-data endpoints; no Kalshi SDK is added.
+
+The repository retains source references, code, synthetic fixtures, hashes and sanitized aggregate qualification evidence only. Raw live Kalshi response bodies and bulk external market archives are not committed or retained in the public proof artifact.
+
+Public endpoint access does not establish unrestricted redistribution rights. Exact normalized forward-snapshot retention/redistribution terms remain unresolved before model-scored OOS, so Release 0.4 does not claim that raw source data may be republished.
