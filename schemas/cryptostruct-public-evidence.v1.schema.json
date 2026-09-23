@@ -13,6 +13,7 @@
     "ineligible_records",
     "rejection_reasons",
     "category_counts",
+    "source_schema_fingerprint",
     "source_contract_hash",
     "qualification",
     "raw_responses_retained",
@@ -45,6 +46,7 @@
       "propertyNames": {
         "enum": [
           "independent_criteria_changed",
+          "semantic_mapping_unproven",
           "frozen_instrument_changed",
           "frozen_instrument_code_changed",
           "deadline_changed",
@@ -90,6 +92,10 @@
         "type": "integer",
         "minimum": 0
       }
+    },
+    "source_schema_fingerprint": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
     },
     "source_contract_hash": {
       "type": "string",

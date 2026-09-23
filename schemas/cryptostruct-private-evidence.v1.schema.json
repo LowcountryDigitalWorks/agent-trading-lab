@@ -2,19 +2,23 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lowcountrydigitalworks.com/schemas/cryptostruct-private-evidence.v1.schema.json",
   "title": "CryptoStruct private cutoff evidence payload v1",
-  "description": "Private payload carried inside the existing EvidenceEvent v1 hash-chain envelope. The EvidenceEvent envelope supplies sequence, prev_record_hash and record_hash.",
+  "description": "Release 0.5.1 corrected private payload carried inside EvidenceEvent v1. Provider fields are normalized from the observed CryptoStruct live MCP contract.",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "schema_version",
     "independent_event_id",
     "independent_event_spec_hash",
+    "source_mapping_record_hash",
     "cryptostruct_instrument_id",
+    "cryptostruct_code",
     "underlying_venue",
     "orientation",
     "category",
+    "source_endpoint",
     "source_tool",
-    "source_version",
+    "source_schema_fingerprint",
+    "source_contract_hash",
     "scheduled_cutoff_utc",
     "request_start_utc",
     "request_complete_utc",
@@ -22,8 +26,10 @@
     "p_control",
     "trades_60m",
     "turnover_usd_60m",
-    "spread_bps",
-    "top1_depth_usd",
+    "spread_bps_60m_avg",
+    "top1_depth_bid_usd_60m",
+    "top1_depth_ask_usd_60m",
+    "top1_depth_min_side_usd_60m",
     "eligibility",
     "rejection_reason",
     "response_content_hash",
@@ -51,7 +57,15 @@
       "type": "string",
       "pattern": "^[a-f0-9]{64}$"
     },
+    "source_mapping_record_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
     "cryptostruct_instrument_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "cryptostruct_code": {
       "type": "string",
       "minLength": 1
     },
@@ -59,10 +73,7 @@
       "const": "polymarket"
     },
     "orientation": {
-      "enum": [
-        "YES",
-        "UP"
-      ]
+      "const": "YES"
     },
     "category": {
       "enum": [
@@ -72,6 +83,9 @@
         "ENTERTAINMENT_CULTURE"
       ]
     },
+    "source_endpoint": {
+      "const": "https://cryptostruct.com/mcp"
+    },
     "source_tool": {
       "enum": [
         "search_instruments",
@@ -79,9 +93,13 @@
         "get_market_snapshot"
       ]
     },
-    "source_version": {
+    "source_schema_fingerprint": {
       "type": "string",
-      "minLength": 1
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "source_contract_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
     },
     "scheduled_cutoff_utc": {
       "type": "string",
@@ -112,11 +130,19 @@
       "type": "number",
       "minimum": 0
     },
-    "spread_bps": {
+    "spread_bps_60m_avg": {
       "type": "number",
       "minimum": 0
     },
-    "top1_depth_usd": {
+    "top1_depth_bid_usd_60m": {
+      "type": "number",
+      "minimum": 0
+    },
+    "top1_depth_ask_usd_60m": {
+      "type": "number",
+      "minimum": 0
+    },
+    "top1_depth_min_side_usd_60m": {
       "type": "number",
       "minimum": 0
     },
@@ -126,6 +152,7 @@
     "rejection_reason": {
       "enum": [
         "independent_criteria_changed",
+        "semantic_mapping_unproven",
         "frozen_instrument_changed",
         "frozen_instrument_code_changed",
         "deadline_changed",

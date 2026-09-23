@@ -1,6 +1,6 @@
 # Contributing
 
-Release 0.5 is intentionally narrow and builds on accepted Release 0.4 main `e44203f5bdc5258f8acb30724c51e1e36b796402`. Before contributing, read `AGENTS.md`, `docs/EXPERIMENT_CONTRACT.md`, and `docs/RELEASE_0_5_CRYPTOSTRUCT_SOURCE_ADAPTER.md`.
+Release 0.5.1 is the bounded live-schema normalization correction authorized by business-operations #272 and builds on accepted main `61ce4cc9841f8aef58c9da18f3af21c1f02c609e`. Before contributing, read `AGENTS.md`, `docs/EXPERIMENT_CONTRACT.md`, and `docs/RELEASE_0_5_1_CRYPTOSTRUCT_LIVE_SCHEMA_NORMALIZATION.md`.
 
 Use a branch and pull request. Keep routine validation deterministic, offline, and synthetic. Run:
 
@@ -9,8 +9,8 @@ npm ci
 npm run verify
 ```
 
-Do not make an operational CryptoStruct Data call, accept provider terms on the owner's behalf, query direct Polymarket/Kalshi, add a model/provider, begin OOS collection, add trading/P&L, add credentials/accounts/OAuth/Premium/purchases, add a database, or broaden source/category/statistical thresholds without a separately accepted gate.
+Do not make any live CryptoStruct call during Stage 1. Do not query direct Polymarket/Kalshi, add a model/provider, begin OOS collection, add trading/P&L, add credentials/accounts/OAuth/Premium/purchases, add a database, or broaden source/category/statistical thresholds without a separately accepted gate.
 
-Release 0.5 permits only the docs/synthetic CryptoStruct source-adapter and evidence-qualification scope authorized by business-operations #269.
+Release 0.5 remains historically BLOCKED; Release 0.5.1 corrects only the Product-frozen normalization contract.
 
 Contributions are submitted under Apache License 2.0 unless explicitly marked otherwise.

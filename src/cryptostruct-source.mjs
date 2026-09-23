@@ -2,7 +2,6 @@ import { canonicalSerialize, isSha256Hex, sha256Hex } from "./canonical.mjs";
 import { buildEvidenceRecord } from "./ledger.mjs";
 
 export const CRYPTOSTRUCT_MCP_ENDPOINT = "https://cryptostruct.com/mcp";
-export const CRYPTOSTRUCT_SOURCE_VERSION = "cryptostruct-keyless-mcp-docs-2026-09";
 export const CRYPTOSTRUCT_PROVIDER = "cryptostruct";
 export const CRYPTOSTRUCT_UNDERLYING_VENUE = "polymarket";
 export const CRYPTOSTRUCT_ALLOWED_TOOLS = Object.freeze([
@@ -20,8 +19,8 @@ export const PHASE0B_CUTOFF_HOURS = Object.freeze([24, 6, 1]);
 export const QUALITY_GATE = Object.freeze({
   min_trades_60m: 5,
   min_turnover_usd_60m: 100,
-  min_top1_depth_usd: 50,
-  max_spread_bps: 2000,
+  min_top1_depth_min_side_usd_60m: 50,
+  max_spread_bps_60m_avg: 2000,
   max_response_lag_ms: 60_000,
 });
 export const COHORT_FLOORS = Object.freeze({
@@ -32,6 +31,7 @@ export const COHORT_FLOORS = Object.freeze({
 });
 export const CRYPTOSTRUCT_REJECTION_REASON_CODES = Object.freeze([
   "independent_criteria_changed",
+  "semantic_mapping_unproven",
   "frozen_instrument_changed",
   "frozen_instrument_code_changed",
   "deadline_changed",
@@ -63,19 +63,49 @@ export const CRYPTOSTRUCT_REJECTION_REASON_CODES = Object.freeze([
   "auth_required",
   "premium_required",
   "purchase_required",
-  "license_changed"
+  "license_changed",
 ]);
+
+export const CRYPTOSTRUCT_SOURCE_CONTRACT = Object.freeze({
+  contract: "ldw-release-0.5.1-cryptostruct-live-schema-normalization",
+  provider: CRYPTOSTRUCT_PROVIDER,
+  endpoint: CRYPTOSTRUCT_MCP_ENDPOINT,
+  underlying_venue: CRYPTOSTRUCT_UNDERLYING_VENUE,
+  provider_semantics: {
+    venue: "polymarket",
+    instrument_type: "prediction",
+    orientation: "YES",
+    price_semantics: "probability_0_1",
+  },
+  wire: {
+    jsonrpc: "2.0",
+    tool_payload: "result.content[].text JSON",
+  },
+  normalized_snapshot: {
+    captured_at_utc: "as_of",
+    p_control: "price_last",
+    trades_60m: "last_60m.trades",
+    turnover_usd_60m: "last_60m.turnover_usd",
+    spread_bps_60m_avg: "last_60m.spread_bps_avg",
+    top1_depth_bid_usd_60m: "last_60m.top1_depth_usd.bid",
+    top1_depth_ask_usd_60m: "last_60m.top1_depth_usd.ask",
+    top1_depth_min_side_usd_60m: "min(bid,ask)",
+  },
+  quality_gate: QUALITY_GATE,
+});
 
 const PROHIBITED_PUBLIC_FIELDS = new Set([
   "cryptostruct_instrument_id",
+  "cryptostruct_code",
   "instrument_id",
   "instrument_code",
-  "last_price",
   "p_control",
   "trades_60m",
   "turnover_usd_60m",
-  "spread_bps",
-  "top1_depth_usd",
+  "spread_bps_60m_avg",
+  "top1_depth_bid_usd_60m",
+  "top1_depth_ask_usd_60m",
+  "top1_depth_min_side_usd_60m",
   "raw_response",
   "raw_orderbook",
 ]);
@@ -139,6 +169,30 @@ function closedKeys(value, allowed, label) {
   for (const key of Object.keys(value)) assert(allowedSet.has(key), `${label} contains unknown field: ${key}`);
 }
 
+function schemaShape(value) {
+  if (value === null) return "null";
+  if (Array.isArray(value)) {
+    const itemShapes = [...new Set(value.map((item) => canonicalSerialize(schemaShape(item))))].sort();
+    return { type: "array", items: itemShapes.map((item) => JSON.parse(item)) };
+  }
+  if (typeof value === "object") {
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, schemaShape(value[key])]),
+    );
+  }
+  return typeof value;
+}
+
+export function sourceSchemaFingerprint(value) {
+  return sha256Hex(canonicalSerialize(schemaShape(value)));
+}
+
+export function cryptoStructSourceContractHash() {
+  return sha256Hex(canonicalSerialize(CRYPTOSTRUCT_SOURCE_CONTRACT));
+}
+
 export function cryptoStructMcpContract() {
   return Object.freeze({
     endpoint: CRYPTOSTRUCT_MCP_ENDPOINT,
@@ -146,15 +200,17 @@ export function cryptoStructMcpContract() {
     free_tier: "keyless",
     operational_access_authorized: false,
     allowed_tools: [...CRYPTOSTRUCT_ALLOWED_TOOLS],
+    source_contract_hash: cryptoStructSourceContractHash(),
     documented_semantics: {
-      search_instruments: "catalog discovery by ticker/base/id with class/venue filters",
-      get_instrument: "master data and coverage summary for one stable instrument id",
-      get_market_snapshot: "live last price plus 60-minute trades/turnover, spread bps, and top-of-book depth",
+      search_instruments: "candidate discovery only; never semantic/category authority",
+      get_instrument: "stable instrument identity/masterdata for mapping and open-state checks",
+      get_market_snapshot: "price_last plus nested last_60m quality metrics",
     },
     documented_units: {
       turnover: "USD",
       depth: "USD",
-      prediction_market_price: "0..1 probability for Yes/Up contract",
+      spread: "basis points",
+      prediction_market_price: "0..1 probability for Polymarket Yes contract",
     },
   });
 }
@@ -182,10 +238,20 @@ export function createCryptoStructSourceAdapter({ invokeTool = null, operational
 
 export function parseMcpToolEnvelope(envelope, toolName) {
   assert(CRYPTOSTRUCT_ALLOWED_TOOLS.includes(toolName), `unsupported tool envelope: ${toolName}`);
-  plain(envelope, `${toolName} envelope`);
-  if (envelope.structuredContent !== undefined) return structuredClone(plain(envelope.structuredContent, `${toolName}.structuredContent`));
-  assert(Array.isArray(envelope.content) && envelope.content.length > 0, `${toolName} envelope missing MCP content`);
-  const textPart = envelope.content.find((part) => part?.type === "text" && typeof part.text === "string");
+  closedKeys(envelope, ["jsonrpc", "id", "result"], `${toolName} JSON-RPC envelope`);
+  assert(envelope.jsonrpc === "2.0", `${toolName} jsonrpc must be 2.0`);
+  assert(
+    (typeof envelope.id === "number" && Number.isFinite(envelope.id))
+      || (typeof envelope.id === "string" && envelope.id.length > 0),
+    `${toolName} id must be a finite number or non-empty string`,
+  );
+  const result = plain(envelope.result, `${toolName}.result`);
+  closedKeys(result, ["content"], `${toolName}.result`);
+  assert(Array.isArray(result.content) && result.content.length > 0, `${toolName} result missing MCP content`);
+  for (const [index, part] of result.content.entries()) {
+    closedKeys(part, ["type", "text"], `${toolName}.result.content[${index}]`);
+  }
+  const textPart = result.content.find((part) => part.type === "text" && typeof part.text === "string");
   assert(textPart, `${toolName} envelope missing text content`);
   let parsed;
   try {
@@ -197,94 +263,244 @@ export function parseMcpToolEnvelope(envelope, toolName) {
 }
 
 export function parseSearchInstrumentsResult(result) {
-  plain(result, "search_instruments result");
-  assert(Array.isArray(result.instruments), "search_instruments.instruments must be an array");
-  return result.instruments.map((item, index) => {
+  closedKeys(result, ["total_matching", "showing", "hits"], "search_instruments result");
+  integerAtLeast(result.total_matching, 0, "search_instruments.total_matching");
+  integerAtLeast(result.showing, 0, "search_instruments.showing");
+  assert(Array.isArray(result.hits), "search_instruments.hits must be an array");
+  assert(result.showing === result.hits.length, "search_instruments.showing must equal hits length");
+  assert(result.showing <= result.total_matching, "search_instruments.showing cannot exceed total_matching");
+  const instruments = result.hits.map((item, index) => {
     closedKeys(item, [
       "instrument_id",
       "code",
+      "type",
       "venue",
-      "instrument_class",
+      "venue_name",
+      "base",
+      "quote",
       "state",
-      "event_cluster_id",
-      "question",
-      "orientation",
-    ], `search_instruments.instruments[${index}]`);
-    return {
-      instrument_id: nonEmpty(item.instrument_id, "instrument_id"),
+      "days_with_data",
+      "first_day",
+      "last_day",
+      "total_bytes_compressed",
+    ], `search_instruments.hits[${index}]`);
+    integerAtLeast(item.instrument_id, 1, "instrument_id");
+    integerAtLeast(item.days_with_data, 0, "days_with_data");
+    integerAtLeast(item.total_bytes_compressed, 0, "total_bytes_compressed");
+    return Object.freeze({
+      instrument_id: String(item.instrument_id),
       code: nonEmpty(item.code, "code"),
+      instrument_class: nonEmpty(item.type, "type").toLowerCase(),
       venue: nonEmpty(item.venue, "venue").toLowerCase(),
-      instrument_class: nonEmpty(item.instrument_class, "instrument_class"),
-      state: nonEmpty(item.state, "state"),
-      event_cluster_id: nonEmpty(item.event_cluster_id, "event_cluster_id"),
-      question: nonEmpty(item.question, "question"),
-      orientation: nonEmpty(item.orientation, "orientation").toUpperCase(),
-    };
+      venue_name: nonEmpty(item.venue_name, "venue_name"),
+      base: nonEmpty(item.base, "base"),
+      quote: nonEmpty(item.quote, "quote"),
+      state: nonEmpty(item.state, "state").toLowerCase(),
+      days_with_data: item.days_with_data,
+      first_day: nonEmpty(item.first_day, "first_day"),
+      last_day: nonEmpty(item.last_day, "last_day"),
+      total_bytes_compressed: item.total_bytes_compressed,
+    });
+  });
+  return Object.freeze({
+    total_matching: result.total_matching,
+    showing: result.showing,
+    instruments,
+    source_schema_fingerprint: sourceSchemaFingerprint(result),
   });
 }
 
-export function parseGetInstrumentResult(result) {
-  plain(result, "get_instrument result");
-  const item = plain(result.instrument, "get_instrument.instrument");
-  closedKeys(item, [
-    "instrument_id",
-    "code",
-    "venue",
-    "instrument_class",
-    "state",
-    "event_cluster_id",
-    "question",
-    "orientation",
-    "close_time_utc",
-    "price_semantics",
-    "provenance",
-  ], "get_instrument.instrument");
-  const provenance = plain(item.provenance, "instrument.provenance");
-  closedKeys(provenance, ["source", "source_version", "stable_id"], "instrument.provenance");
+function providerSemanticsForInstrument({ venue, instrument_class }) {
+  if (String(venue).toLowerCase() !== CRYPTOSTRUCT_UNDERLYING_VENUE) {
+    return { valid: false, reason: "wrong_venue" };
+  }
+  if (String(instrument_class).toLowerCase() !== "prediction") {
+    return { valid: false, reason: "not_binary_prediction" };
+  }
   return {
-    instrument_id: nonEmpty(item.instrument_id, "instrument_id"),
-    code: nonEmpty(item.code, "code"),
-    venue: nonEmpty(item.venue, "venue").toLowerCase(),
-    instrument_class: nonEmpty(item.instrument_class, "instrument_class"),
-    state: nonEmpty(item.state, "state"),
-    event_cluster_id: nonEmpty(item.event_cluster_id, "event_cluster_id"),
-    question: nonEmpty(item.question, "question"),
-    orientation: nonEmpty(item.orientation, "orientation").toUpperCase(),
-    close_time_utc: iso(item.close_time_utc, "close_time_utc"),
-    price_semantics: nonEmpty(item.price_semantics, "price_semantics"),
-    provenance: {
-      source: nonEmpty(provenance.source, "provenance.source"),
-      source_version: nonEmpty(provenance.source_version, "provenance.source_version"),
-      stable_id: provenance.stable_id === true,
-    },
+    valid: true,
+    reason: "provider_probability_semantics",
+    orientation: "YES",
+    price_semantics: "probability_0_1",
   };
 }
 
-export function parseGetMarketSnapshotResult(result) {
-  plain(result, "get_market_snapshot result");
-  const item = plain(result.snapshot, "get_market_snapshot.snapshot");
-  closedKeys(item, [
+export function parseGetInstrumentResult(result) {
+  closedKeys(result, [
     "instrument_id",
-    "captured_at_utc",
-    "last_price",
-    "trades_60m",
-    "turnover_usd_60m",
-    "spread_bps",
+    "code",
+    "type",
+    "venue",
+    "venue_name",
+    "base",
+    "quote",
+    "state",
+    "days_with_data",
+    "first_day",
+    "last_day",
+    "total_bytes_compressed",
+    "listed_since",
+  ], "get_instrument result");
+  integerAtLeast(result.instrument_id, 1, "instrument_id");
+  integerAtLeast(result.days_with_data, 0, "days_with_data");
+  integerAtLeast(result.total_bytes_compressed, 0, "total_bytes_compressed");
+  const instrument_class = nonEmpty(result.type, "type").toLowerCase();
+  const venue = nonEmpty(result.venue, "venue").toLowerCase();
+  const providerSemantics = providerSemanticsForInstrument({ venue, instrument_class });
+  return Object.freeze({
+    instrument_id: String(result.instrument_id),
+    code: nonEmpty(result.code, "code"),
+    instrument_class,
+    venue,
+    venue_name: nonEmpty(result.venue_name, "venue_name"),
+    base: nonEmpty(result.base, "base"),
+    quote: nonEmpty(result.quote, "quote"),
+    state: nonEmpty(result.state, "state").toLowerCase(),
+    days_with_data: result.days_with_data,
+    first_day: nonEmpty(result.first_day, "first_day"),
+    last_day: nonEmpty(result.last_day, "last_day"),
+    total_bytes_compressed: result.total_bytes_compressed,
+    listed_since: nonEmpty(result.listed_since, "listed_since"),
+    orientation: providerSemantics.valid ? providerSemantics.orientation : null,
+    price_semantics: providerSemantics.valid ? providerSemantics.price_semantics : null,
+    source_schema_fingerprint: sourceSchemaFingerprint(result),
+  });
+}
+
+export function parseGetMarketSnapshotResult(result) {
+  closedKeys(result, [
+    "instrument_id",
+    "code",
+    "venue",
+    "as_of",
+    "price_last",
+    "change_24h_pct",
+    "vwap_last_minute",
+    "last_60m",
+    "last_24h",
+  ], "get_market_snapshot result");
+  integerAtLeast(result.instrument_id, 1, "snapshot.instrument_id");
+  const last60 = plain(result.last_60m, "snapshot.last_60m");
+  closedKeys(last60, [
+    "turnover_usd",
+    "turnover_buy_usd",
+    "turnover_sell_usd",
+    "trades",
+    "liquidations",
+    "spread_bps_avg",
     "top1_depth_usd",
-    "source_surface",
-    "source_version",
-  ], "get_market_snapshot.snapshot");
-  return {
-    instrument_id: nonEmpty(item.instrument_id, "snapshot.instrument_id"),
-    captured_at_utc: iso(item.captured_at_utc, "snapshot.captured_at_utc"),
-    last_price: probability(item.last_price, "snapshot.last_price"),
-    trades_60m: integerAtLeast(item.trades_60m, 0, "snapshot.trades_60m"),
-    turnover_usd_60m: nonNegative(item.turnover_usd_60m, "snapshot.turnover_usd_60m"),
-    spread_bps: nonNegative(item.spread_bps, "snapshot.spread_bps"),
-    top1_depth_usd: nonNegative(item.top1_depth_usd, "snapshot.top1_depth_usd"),
-    source_surface: nonEmpty(item.source_surface, "snapshot.source_surface"),
-    source_version: nonEmpty(item.source_version, "snapshot.source_version"),
+    "top20_depth_usd",
+  ], "snapshot.last_60m");
+  integerAtLeast(last60.trades, 0, "snapshot.last_60m.trades");
+  integerAtLeast(last60.liquidations, 0, "snapshot.last_60m.liquidations");
+  for (const field of ["turnover_usd", "turnover_buy_usd", "turnover_sell_usd", "spread_bps_avg"]) {
+    nonNegative(last60[field], `snapshot.last_60m.${field}`);
+  }
+  const top1 = plain(last60.top1_depth_usd, "snapshot.last_60m.top1_depth_usd");
+  const top20 = plain(last60.top20_depth_usd, "snapshot.last_60m.top20_depth_usd");
+  closedKeys(top1, ["bid", "ask"], "snapshot.last_60m.top1_depth_usd");
+  closedKeys(top20, ["bid", "ask"], "snapshot.last_60m.top20_depth_usd");
+  for (const side of ["bid", "ask"]) {
+    nonNegative(top1[side], `snapshot.last_60m.top1_depth_usd.${side}`);
+    nonNegative(top20[side], `snapshot.last_60m.top20_depth_usd.${side}`);
+  }
+  const last24 = plain(result.last_24h, "snapshot.last_24h");
+  closedKeys(last24, ["turnover_usd", "trades", "minutes_covered"], "snapshot.last_24h");
+  nonNegative(last24.turnover_usd, "snapshot.last_24h.turnover_usd");
+  integerAtLeast(last24.trades, 0, "snapshot.last_24h.trades");
+  integerAtLeast(last24.minutes_covered, 0, "snapshot.last_24h.minutes_covered");
+  finiteNumber(result.change_24h_pct, "snapshot.change_24h_pct");
+  probability(result.price_last, "snapshot.price_last");
+  probability(result.vwap_last_minute, "snapshot.vwap_last_minute");
+  const bid = top1.bid;
+  const ask = top1.ask;
+  return Object.freeze({
+    instrument_id: String(result.instrument_id),
+    code: nonEmpty(result.code, "snapshot.code"),
+    venue: nonEmpty(result.venue, "snapshot.venue").toLowerCase(),
+    captured_at_utc: iso(result.as_of, "snapshot.as_of"),
+    p_control: result.price_last,
+    trades_60m: last60.trades,
+    turnover_usd_60m: last60.turnover_usd,
+    spread_bps_60m_avg: last60.spread_bps_avg,
+    top1_depth_bid_usd_60m: bid,
+    top1_depth_ask_usd_60m: ask,
+    top1_depth_min_side_usd_60m: Math.min(bid, ask),
+    source_schema_fingerprint: sourceSchemaFingerprint(result),
+  });
+}
+
+export function validateSourceMappingRecord(record) {
+  closedKeys(record, [
+    "schema_version",
+    "independent_event_spec_hash",
+    "cryptostruct_instrument_id",
+    "cryptostruct_code",
+    "venue",
+    "type",
+    "mapping_review_timestamp",
+    "mapping_evidence_hash",
+    "mapping_status",
+  ], "SourceMappingRecord");
+  assert(record.schema_version === "cryptostruct-source-mapping-record.v1", "SourceMappingRecord schema_version mismatch");
+  assert(isSha256Hex(record.independent_event_spec_hash), "SourceMappingRecord independent_event_spec_hash must be SHA-256 hex");
+  nonEmpty(record.cryptostruct_instrument_id, "SourceMappingRecord cryptostruct_instrument_id");
+  nonEmpty(record.cryptostruct_code, "SourceMappingRecord cryptostruct_code");
+  assert(record.venue === CRYPTOSTRUCT_UNDERLYING_VENUE, "SourceMappingRecord venue must be polymarket");
+  assert(record.type === "prediction", "SourceMappingRecord type must be prediction");
+  iso(record.mapping_review_timestamp, "SourceMappingRecord mapping_review_timestamp");
+  assert(isSha256Hex(record.mapping_evidence_hash), "SourceMappingRecord mapping_evidence_hash must be SHA-256 hex");
+  assert(record.mapping_status === "VERIFIED", "SourceMappingRecord mapping_status must be VERIFIED");
+  return record;
+}
+
+export function createSourceMappingRecord(input) {
+  const record = {
+    schema_version: "cryptostruct-source-mapping-record.v1",
+    independent_event_spec_hash: input.independent_event_spec_hash,
+    cryptostruct_instrument_id: String(input.cryptostruct_instrument_id),
+    cryptostruct_code: nonEmpty(input.cryptostruct_code, "cryptostruct_code"),
+    venue: String(input.venue).toLowerCase(),
+    type: String(input.type).toLowerCase(),
+    mapping_review_timestamp: input.mapping_review_timestamp,
+    mapping_evidence_hash: input.mapping_evidence_hash,
+    mapping_status: input.mapping_status,
   };
+  validateSourceMappingRecord(record);
+  return Object.freeze(record);
+}
+
+export function sourceMappingRecordHash(record) {
+  validateSourceMappingRecord(record);
+  return sha256Hex(canonicalSerialize(record));
+}
+
+export function validateSourceMappingForSpec({ spec, instrument, mapping_record }) {
+  try {
+    validateIndependentEventSpec(spec);
+    if (!mapping_record || mapping_record.mapping_status !== "VERIFIED") {
+      return { valid: false, reason: "semantic_mapping_unproven" };
+    }
+    validateSourceMappingRecord(mapping_record);
+    if (mapping_record.independent_event_spec_hash !== independentEventSpecHash(spec)) {
+      return { valid: false, reason: "semantic_mapping_unproven" };
+    }
+    if (
+      mapping_record.cryptostruct_instrument_id !== instrument.instrument_id
+      || mapping_record.cryptostruct_code !== instrument.code
+      || mapping_record.venue !== instrument.venue
+      || mapping_record.type !== instrument.instrument_class
+    ) {
+      return { valid: false, reason: "semantic_mapping_unproven" };
+    }
+    return {
+      valid: true,
+      reason: "verified_source_mapping",
+      source_mapping_record_hash: sourceMappingRecordHash(mapping_record),
+    };
+  } catch {
+    return { valid: false, reason: "semantic_mapping_unproven" };
+  }
 }
 
 export function validateIndependentEventSpec(spec) {
@@ -370,12 +586,17 @@ export function plannedCryptoStructCutoffs(deadlineUtc) {
 export function validatePolymarketBinaryOrientation(instrument) {
   try {
     plain(instrument, "instrument");
-    if (String(instrument.venue).toLowerCase() !== CRYPTOSTRUCT_UNDERLYING_VENUE) return { valid: false, reason: "wrong_venue" };
-    if (instrument.instrument_class !== "prediction_binary") return { valid: false, reason: "not_binary_prediction" };
-    if (!new Set(["YES", "UP"]).has(String(instrument.orientation).toUpperCase())) return { valid: false, reason: "orientation_ambiguous" };
+    const semantics = providerSemanticsForInstrument(instrument);
+    if (!semantics.valid) return semantics;
+    if (instrument.orientation !== "YES") return { valid: false, reason: "orientation_ambiguous" };
     if (instrument.price_semantics !== "probability_0_1") return { valid: false, reason: "price_semantics_unqualified" };
-    if (instrument.provenance?.stable_id !== true) return { valid: false, reason: "unstable_instrument_id" };
-    return { valid: true, reason: "eligible_orientation", orientation: String(instrument.orientation).toUpperCase() };
+    if (!instrument.instrument_id || !instrument.code) return { valid: false, reason: "unstable_instrument_id" };
+    return {
+      valid: true,
+      reason: "eligible_orientation",
+      orientation: "YES",
+      price_semantics: "probability_0_1",
+    };
   } catch (error) {
     return { valid: false, reason: "malformed_instrument", detail: error.message };
   }
@@ -400,8 +621,12 @@ export function evaluateCryptoStructSourceQuality({
   spec,
   frozen_spec_hash,
   frozen_instrument_id,
+  frozen_instrument_code,
   instrument,
   snapshot,
+  source_mapping_record,
+  frozen_source_mapping_record_hash = null,
+  source_contract_hash = cryptoStructSourceContractHash(),
   cutoff_utc,
   request_start_utc,
   request_complete_utc,
@@ -411,10 +636,19 @@ export function evaluateCryptoStructSourceQuality({
     const currentSpecHash = independentEventSpecHash(spec);
     if (currentSpecHash !== frozen_spec_hash) return { eligible: false, reason: "independent_criteria_changed" };
     if (instrument.instrument_id !== frozen_instrument_id) return { eligible: false, reason: "frozen_instrument_changed" };
+    if (instrument.code !== frozen_instrument_code) return { eligible: false, reason: "frozen_instrument_code_changed" };
     if (instrument.state !== "open") return { eligible: false, reason: "event_not_open_or_unresolved" };
     const orientation = validatePolymarketBinaryOrientation(instrument);
     if (!orientation.valid) return { eligible: false, reason: orientation.reason };
-    if (snapshot.instrument_id !== frozen_instrument_id) return { eligible: false, reason: "snapshot_instrument_mismatch" };
+    const mapping = validateSourceMappingForSpec({ spec, instrument, mapping_record: source_mapping_record });
+    if (!mapping.valid) return { eligible: false, reason: mapping.reason };
+    if (frozen_source_mapping_record_hash !== null && mapping.source_mapping_record_hash !== frozen_source_mapping_record_hash) {
+      return { eligible: false, reason: "semantic_mapping_unproven" };
+    }
+    if (snapshot.instrument_id !== frozen_instrument_id || snapshot.code !== frozen_instrument_code) {
+      return { eligible: false, reason: "snapshot_instrument_mismatch" };
+    }
+    if (snapshot.venue !== CRYPTOSTRUCT_UNDERLYING_VENUE) return { eligible: false, reason: "wrong_venue" };
     const timing = validateCutoffTiming({
       cutoff_utc,
       request_start_utc,
@@ -422,24 +656,37 @@ export function evaluateCryptoStructSourceQuality({
       snapshot_capture_utc: snapshot.captured_at_utc,
     });
     if (!timing.valid) return { eligible: false, reason: timing.reason };
-    probability(snapshot.last_price, "snapshot.last_price");
+    probability(snapshot.p_control, "snapshot.p_control");
     if (snapshot.trades_60m < QUALITY_GATE.min_trades_60m) return { eligible: false, reason: "low_trades_60m" };
     if (snapshot.turnover_usd_60m < QUALITY_GATE.min_turnover_usd_60m) return { eligible: false, reason: "low_turnover_60m" };
-    if (snapshot.top1_depth_usd < QUALITY_GATE.min_top1_depth_usd) return { eligible: false, reason: "low_top1_depth" };
-    if (snapshot.spread_bps > QUALITY_GATE.max_spread_bps) return { eligible: false, reason: "invalid_or_wide_spread" };
-    if (!snapshot.source_surface || !snapshot.source_version || !instrument.provenance?.source || !instrument.provenance?.source_version) {
+    if (snapshot.top1_depth_min_side_usd_60m < QUALITY_GATE.min_top1_depth_min_side_usd_60m) {
+      return { eligible: false, reason: "low_top1_depth" };
+    }
+    if (snapshot.spread_bps_60m_avg > QUALITY_GATE.max_spread_bps_60m_avg) {
+      return { eligible: false, reason: "invalid_or_wide_spread" };
+    }
+    if (
+      !isSha256Hex(instrument.source_schema_fingerprint)
+      || !isSha256Hex(snapshot.source_schema_fingerprint)
+      || source_contract_hash !== cryptoStructSourceContractHash()
+    ) {
       return { eligible: false, reason: "provenance_missing" };
     }
     return {
       eligible: true,
       reason: "eligible",
-      p_control: snapshot.last_price,
+      p_control: snapshot.p_control,
       orientation: orientation.orientation,
+      source_mapping_record_hash: mapping.source_mapping_record_hash,
+      source_schema_fingerprint: snapshot.source_schema_fingerprint,
+      source_contract_hash,
       quality: {
         trades_60m: snapshot.trades_60m,
         turnover_usd_60m: snapshot.turnover_usd_60m,
-        spread_bps: snapshot.spread_bps,
-        top1_depth_usd: snapshot.top1_depth_usd,
+        spread_bps_60m_avg: snapshot.spread_bps_60m_avg,
+        top1_depth_bid_usd_60m: snapshot.top1_depth_bid_usd_60m,
+        top1_depth_ask_usd_60m: snapshot.top1_depth_ask_usd_60m,
+        top1_depth_min_side_usd_60m: snapshot.top1_depth_min_side_usd_60m,
       },
     };
   } catch (error) {
@@ -456,28 +703,37 @@ export function selectCryptoStructInstrument(candidates) {
     const rq = right.eligibility.quality;
     if (lq.turnover_usd_60m !== rq.turnover_usd_60m) return rq.turnover_usd_60m - lq.turnover_usd_60m;
     if (lq.trades_60m !== rq.trades_60m) return rq.trades_60m - lq.trades_60m;
-    if (lq.spread_bps !== rq.spread_bps) return lq.spread_bps - rq.spread_bps;
-    if (lq.top1_depth_usd !== rq.top1_depth_usd) return rq.top1_depth_usd - lq.top1_depth_usd;
+    if (lq.spread_bps_60m_avg !== rq.spread_bps_60m_avg) return lq.spread_bps_60m_avg - rq.spread_bps_60m_avg;
+    if (lq.top1_depth_min_side_usd_60m !== rq.top1_depth_min_side_usd_60m) {
+      return rq.top1_depth_min_side_usd_60m - lq.top1_depth_min_side_usd_60m;
+    }
     return String(left.instrument.instrument_id).localeCompare(String(right.instrument.instrument_id));
   });
   const chosen = eligible[0];
+  const mappingHash = chosen.eligibility.source_mapping_record_hash
+    ?? sourceMappingRecordHash(chosen.source_mapping_record);
   return Object.freeze({
     independent_event_id: chosen.spec.event_id,
     independent_event_spec_hash: independentEventSpecHash(chosen.spec),
     instrument_id: chosen.instrument.instrument_id,
     instrument_code: chosen.instrument.code,
+    source_mapping_record_hash: mappingHash,
     underlying_venue: CRYPTOSTRUCT_UNDERLYING_VENUE,
-    orientation: chosen.eligibility.orientation,
+    orientation: "YES",
     frozen_deadline_utc: chosen.spec.deadline_utc,
     selected_at_cutoff: "T-24h",
   });
 }
 
-export function validateFrozenCryptoStructSelection(selection, { spec, instrument }) {
+export function validateFrozenCryptoStructSelection(selection, { spec, instrument, source_mapping_record }) {
   if (selection.independent_event_spec_hash !== independentEventSpecHash(spec)) return { valid: false, reason: "independent_criteria_changed" };
   if (selection.instrument_id !== instrument.instrument_id) return { valid: false, reason: "frozen_instrument_changed" };
   if (selection.instrument_code !== instrument.code) return { valid: false, reason: "frozen_instrument_code_changed" };
   if (selection.frozen_deadline_utc !== spec.deadline_utc) return { valid: false, reason: "deadline_changed" };
+  const mapping = validateSourceMappingForSpec({ spec, instrument, mapping_record: source_mapping_record });
+  if (!mapping.valid || mapping.source_mapping_record_hash !== selection.source_mapping_record_hash) {
+    return { valid: false, reason: "semantic_mapping_unproven" };
+  }
   return { valid: true, reason: "frozen_selection_valid" };
 }
 
@@ -581,12 +837,16 @@ export function validatePrivateEvidencePayload(payload) {
     "schema_version",
     "independent_event_id",
     "independent_event_spec_hash",
+    "source_mapping_record_hash",
     "cryptostruct_instrument_id",
+    "cryptostruct_code",
     "underlying_venue",
     "orientation",
     "category",
+    "source_endpoint",
     "source_tool",
-    "source_version",
+    "source_schema_fingerprint",
+    "source_contract_hash",
     "scheduled_cutoff_utc",
     "request_start_utc",
     "request_complete_utc",
@@ -594,8 +854,10 @@ export function validatePrivateEvidencePayload(payload) {
     "p_control",
     "trades_60m",
     "turnover_usd_60m",
-    "spread_bps",
-    "top1_depth_usd",
+    "spread_bps_60m_avg",
+    "top1_depth_bid_usd_60m",
+    "top1_depth_ask_usd_60m",
+    "top1_depth_min_side_usd_60m",
     "eligibility",
     "rejection_reason",
     "response_content_hash",
@@ -614,18 +876,28 @@ export function validatePrivateEvidencePayload(payload) {
   assert(payload.schema_version === "cryptostruct-private-evidence.v1", "private evidence schema mismatch");
   nonEmpty(payload.independent_event_id, "independent_event_id");
   assert(isSha256Hex(payload.independent_event_spec_hash), "independent_event_spec_hash must be SHA-256 hex");
+  assert(isSha256Hex(payload.source_mapping_record_hash), "source_mapping_record_hash must be SHA-256 hex");
   nonEmpty(payload.cryptostruct_instrument_id, "cryptostruct_instrument_id");
+  nonEmpty(payload.cryptostruct_code, "cryptostruct_code");
   assert(payload.underlying_venue === CRYPTOSTRUCT_UNDERLYING_VENUE, "underlying_venue must be polymarket");
-  assert(new Set(["YES", "UP"]).has(payload.orientation), "orientation must be YES or UP");
+  assert(payload.orientation === "YES", "orientation must be YES");
   assert(PHASE0B_ALLOWED_CATEGORIES.includes(payload.category), "private evidence category not allowed");
+  assert(payload.source_endpoint === CRYPTOSTRUCT_MCP_ENDPOINT, "source_endpoint mismatch");
   assert(CRYPTOSTRUCT_ALLOWED_TOOLS.includes(payload.source_tool), "source_tool not permitted");
-  nonEmpty(payload.source_version, "source_version");
+  assert(isSha256Hex(payload.source_schema_fingerprint), "source_schema_fingerprint must be SHA-256 hex");
+  assert(payload.source_contract_hash === cryptoStructSourceContractHash(), "source_contract_hash mismatch");
   for (const field of ["scheduled_cutoff_utc", "request_start_utc", "request_complete_utc", "capture_timestamp_utc", "frozen_deadline_utc"]) iso(payload[field], field);
   probability(payload.p_control, "p_control");
   integerAtLeast(payload.trades_60m, 0, "trades_60m");
   nonNegative(payload.turnover_usd_60m, "turnover_usd_60m");
-  nonNegative(payload.spread_bps, "spread_bps");
-  nonNegative(payload.top1_depth_usd, "top1_depth_usd");
+  nonNegative(payload.spread_bps_60m_avg, "spread_bps_60m_avg");
+  nonNegative(payload.top1_depth_bid_usd_60m, "top1_depth_bid_usd_60m");
+  nonNegative(payload.top1_depth_ask_usd_60m, "top1_depth_ask_usd_60m");
+  nonNegative(payload.top1_depth_min_side_usd_60m, "top1_depth_min_side_usd_60m");
+  assert(
+    payload.top1_depth_min_side_usd_60m === Math.min(payload.top1_depth_bid_usd_60m, payload.top1_depth_ask_usd_60m),
+    "top1_depth_min_side_usd_60m must equal min(bid,ask)",
+  );
   assert(typeof payload.eligibility === "boolean", "eligibility must be boolean");
   assert(
     payload.rejection_reason === null || CRYPTOSTRUCT_REJECTION_REASON_CODES.includes(payload.rejection_reason),
@@ -645,10 +917,14 @@ export function validatePrivateEvidencePayload(payload) {
   return payload;
 }
 
-export function buildSanitizedPublicEvidence(privateEvents, { qualification, source_contract_hash }) {
+export function buildSanitizedPublicEvidence(
+  privateEvents,
+  { qualification, source_contract_hash, source_schema_fingerprint },
+) {
   assert(Array.isArray(privateEvents), "privateEvents must be an array");
   assert(new Set(["QUALIFIED", "INSUFFICIENT", "BLOCKED"]).has(qualification), "qualification must be QUALIFIED/INSUFFICIENT/BLOCKED");
-  assert(isSha256Hex(source_contract_hash), "source_contract_hash must be SHA-256 hex");
+  assert(source_contract_hash === cryptoStructSourceContractHash(), "source_contract_hash mismatch");
+  assert(isSha256Hex(source_schema_fingerprint), "source_schema_fingerprint must be SHA-256 hex");
   const rejection_reasons = {};
   const categories = {};
   let eligible = 0;
@@ -673,6 +949,7 @@ export function buildSanitizedPublicEvidence(privateEvents, { qualification, sou
     ineligible_records: privateEvents.length - eligible,
     rejection_reasons,
     category_counts: categories,
+    source_schema_fingerprint,
     source_contract_hash,
     qualification,
     raw_responses_retained: false,
