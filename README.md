@@ -2,9 +2,9 @@
 
 Agent Trading Lab is a Lowcountry Digital Works experimental research repository for measuring whether bounded decision layers add value over deterministic baselines under identical evidence and risk assumptions.
 
-Release 0.1 established deterministic measurement contracts and the evidence ledger. Release 0.2 proved the public-data measurement integration. **Release 0.3 adds only the authorized Phase 0A executability sensitivity**: the canonical 10% stake is paired with one predeclared 1% engineering sensitivity on one shared May-August Kraken public dataset, with every Release 0.2 liquidity, execution, cost, risk and evidence invariant preserved.
+Release 0.1 established deterministic measurement contracts and the evidence ledger. Releases 0.2–0.3 completed the bounded Phase 0A engineering measurement. **Release 0.4 adds only the authorized Phase 0B forecast-measurement harness and Kalshi public-source qualification**. It does not call a model, begin forward OOS collection, trade, or simulate P&L.
 
-This is a measurement/integration proof, **not an alpha claim**. It contains no external AI/model calls, prediction-market ingestion, exchange account or authenticated API access, paper/live order connectivity, wallets/signing, customer functionality, paid services, or real-capital path.
+This remains experimental measurement infrastructure, not an alpha claim or investment product. Release 0.4 uses only bounded unauthenticated public Kalshi reads for source qualification and synthetic/mock treatment for forecast-harness tests.
 
 ## Release 0.2 boundaries
 
@@ -38,3 +38,12 @@ Release 0.3 uses one acquisition/normalization dataset for both stake variants a
 The frozen engineering coverage window is 2026-05-01 through 2026-08-01 UTC, end exclusive. The 1% value is not a new default, and the window is not strategy-edge/OOS evidence. FULL PASS, PARTIAL PASS and NEGATIVE are all valid engineering outcomes; no result authorizes an automatic second sensitivity.
 
 See [Release 0.3 executability sensitivity](docs/RELEASE_0_3_EXECUTABILITY_SENSITIVITY.md).
+
+
+## Release 0.4 Phase 0B foundation
+
+Release 0.4 implements the market-midpoint control, deterministic one-market-per-event selector, T-24h/T-6h/T-1h schedule semantics, fail-closed source eligibility, mock treatment fallback, Brier/BSS/log-loss/calibration scoring, event-cluster bootstrap, robustness diagnostics, probability-stability helpers, and the future OOS-A/OOS-B state machine.
+
+Routine CI remains offline and synthetic. Exactly one separately armed live qualification proof may issue at most 250 public unauthenticated GETs while inspecting at most 50 candidate events. Raw live response bodies are not retained in the repository or public proof artifact.
+
+See [Release 0.4 Phase 0B harness and source qualification](docs/RELEASE_0_4_PHASE_0B_HARNESS.md).

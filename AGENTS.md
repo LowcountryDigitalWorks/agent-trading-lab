@@ -2,18 +2,20 @@
 
 This repository is the public research codebase for the Lowcountry Digital Works Agent Trading Lab.
 
-Release 0.3 is limited to the deterministic Phase 0A executability sensitivity authorized by `LowcountryDigitalWorks/business-operations#251`, building on accepted Release 0.2 main `ac3a316d07788ea90183f3acef61dcc70106682b`.
+Release 0.4 is limited to the deterministic Phase 0B forecast harness and Kalshi public-source qualification authorized by `LowcountryDigitalWorks/business-operations#258`, building on accepted Release 0.3 main `0cc2bacceaf0dd9484b529539a896fb7f2d9bef3`.
 
 ## Boundaries
 
-- Run exactly two stake configurations for Release 0.3: canonical 10% control and predeclared 1% engineering sensitivity. The default remains 10%.
-- Use exactly one shared Kraken public dataset for BTC/USDT and ETH/USDT from 2026-05-01 through 2026-08-01 UTC, end exclusive.
-- Freqtrade `2026.8` remains an external GPLv3 CLI/file-artifact boundary; do not import, vendor, copy, or link its implementation into LDW-authored modules.
-- Preserve Release 0.2 EMA, risk, liquidity, exact T+5m/T+10m execution, cost, fail-closed and evidence-contract behavior.
-- The May-August window is engineering coverage data only, not strategy-edge or independent OOS evidence.
-- No other stake, liquidity threshold, window, asset, EMA setting, strategy, cost/latency rule, partial fill, hyperopt, or return-seeking optimization is authorized.
-- No Phase 0B, external model/API calls, prediction-market integration, live/paper brokerage/exchange connectivity, order submission, account/API-key/wallet/signing/credential handling, or real capital.
-- No customer, PHI, CUI, payment, or account data.
+- Phase 0A Releases 0.1–0.3 are closed. Do not change crypto pairs, windows, EMA logic, stake, liquidity, risk, costs, execution, or the accepted Release 0.3 NEGATIVE result.
+- Release 0.4 is source qualification + forecast measurement harness only. It is not model-efficacy testing, OOS collection, trading, execution, or P&L testing.
+- Kalshi access is public unauthenticated read-only REST only. No account, API key, credential, signing, authenticated endpoint, or order path.
+- Exactly one bounded live qualification proof is authorized after routine CI is green: <=250 GETs and <=50 candidate events.
+- The proof must not retain raw live response bodies or bulk orderbook/market archives in the repository or public artifact.
+- Mock/synthetic treatment only. No Gemini, OpenAI, Jev, or other external model/API call.
+- No OOS-A/OOS-B live collection in this release.
+- No prediction-market trading, BUY/SELL threshold, portfolio sizing, wallet, signing, paper/live execution, or P&L simulation.
+- Preserve Release 0.1 CandidateEnvelope/DecisionRecord/EvidenceEvent/RunManifest and append-only + hash-chained + tamper-evident evidence semantics.
 - Incremental cash and real capital remain $0.
+- No customer data, PHI, CUI, payment data, credentials, or private LDW material.
 
-Use branches and pull requests for meaningful changes. Keep routine CI synthetic/offline, preserve Release 0.1 contract validators and append-only/hash-chained/tamper-evident evidence semantics, run exactly one controlled Release 0.3 public-data proof after the candidate is frozen, and return to Product Orchestrator before merge or any later release.
+Use a meaningful branch and PR. Routine CI stays offline, synthetic, and deterministic. Development must not merge; freeze the exact candidate and return to Product Orchestrator after the one authorized source-qualification proof.

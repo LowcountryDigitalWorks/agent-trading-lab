@@ -41,3 +41,15 @@ Release 0.3 parameterizes entry stake without changing the canonical 10% default
 The signal-stream digest covers source hashes, closed-1h EMA state, transitions, exact T+5m/T+10m execution-bucket identity, bucket availability and quote volume. Downstream portfolio state is intentionally allowed to diverge after stake-dependent accept/reject outcomes.
 
 Scale-conversion diagnostics pair bullish entry opportunities by stake-independent opportunity ID and execution timestamp. They never infer causality from aggregate fill counts alone.
+
+## Release 0.4 Phase 0B forecast layer
+
+Release 0.4 adds a separate read-only forecast-measurement path while leaving Phase 0A closed:
+
+`Kalshi public REST -> fail-closed source adapter -> deterministic one-market-per-event selector -> midpoint p_control -> CandidateEnvelope v1 track 0B -> mock treatment/fallback -> paired forecast metrics -> clustered robustness -> existing EvidenceEvent/RunManifest`
+
+The source adapter performs decimal-safe top-of-book math from YES/NO bid ladders and never invents asks independently. Planned T-24h/T-6h/T-1h cutoff semantics are deterministic contracts only; real OOS collection is not started.
+
+The OOS-A/OOS-B state machine, one-redesign rule, bootstrap, robustness and stability helpers define future evaluation mechanics without invoking a model.
+
+Routine CI remains synthetic/offline. The one live source-qualification workflow is explicitly marker-gated and retains only sanitized aggregate evidence, not raw Kalshi payloads.
