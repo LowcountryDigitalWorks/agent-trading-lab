@@ -404,14 +404,7 @@ export function parseGetMarketSnapshotResult(result) {
     nonNegative(top1[side], `snapshot.last_60m.top1_depth_usd.${side}`);
     nonNegative(top20[side], `snapshot.last_60m.top20_depth_usd.${side}`);
   }
-  const last24 = plain(result.last_24h, "snapshot.last_24h");
-  closedKeys(last24, ["turnover_usd", "trades", "minutes_covered"], "snapshot.last_24h");
-  nonNegative(last24.turnover_usd, "snapshot.last_24h.turnover_usd");
-  integerAtLeast(last24.trades, 0, "snapshot.last_24h.trades");
-  integerAtLeast(last24.minutes_covered, 0, "snapshot.last_24h.minutes_covered");
-  finiteNumber(result.change_24h_pct, "snapshot.change_24h_pct");
   probability(result.price_last, "snapshot.price_last");
-  probability(result.vwap_last_minute, "snapshot.vwap_last_minute");
   const bid = top1.bid;
   const ask = top1.ask;
   return Object.freeze({

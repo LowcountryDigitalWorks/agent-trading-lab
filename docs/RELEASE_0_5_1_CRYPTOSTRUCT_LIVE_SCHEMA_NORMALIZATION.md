@@ -52,7 +52,7 @@ A private `cryptostruct-source-mapping-record.v1` binds the IndependentEventSpec
 - `top1_depth_ask_usd_60m = raw.last_60m.top1_depth_usd.ask`
 - `top1_depth_min_side_usd_60m = min(bid, ask)`
 
-`vwap_last_minute`, `last_24h`, midpoint math, later observations, and historical nearest values are not p_control substitutes.
+`change_24h_pct`, `vwap_last_minute`, and `last_24h` are observed diagnostic keys only: they may be absent, null, or provider-shaped differently without making an otherwise valid normalized snapshot ineligible. They are ignored by Release 0.5.1 normalization and eligibility. Unknown top-level provider fields still fail closed under the existing schema-change posture. Midpoint math, later observations, and historical nearest values are not p_control substitutes.
 
 ## Quality gate
 

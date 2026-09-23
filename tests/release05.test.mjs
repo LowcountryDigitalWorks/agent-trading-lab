@@ -252,6 +252,50 @@ test("get_market_snapshot maps price_last and nested 60m fields exactly", async 
   assert.equal(snap.top1_depth_min_side_usd_60m, 75);
 });
 
+test("unused snapshot diagnostics are optional and ignored by normalization", async () => {
+  const base = parseMcpToolEnvelope(await fixture("cryptostruct-market-snapshot.synthetic.json"), "get_market_snapshot");
+
+  const withoutLast24 = structuredClone(base);
+  delete withoutLast24.last_24h;
+  assert.equal(parseGetMarketSnapshotResult(withoutLast24).p_control, base.price_last);
+
+  const opaqueLast24 = structuredClone(base);
+  opaqueLast24.last_24h = { opaque: { provider_specific: true }, changed_shape: ["not", "normalized"] };
+  assert.equal(parseGetMarketSnapshotResult(opaqueLast24).p_control, base.price_last);
+
+  const nullDiagnostics = structuredClone(base);
+  nullDiagnostics.vwap_last_minute = null;
+  nullDiagnostics.change_24h_pct = null;
+  assert.equal(parseGetMarketSnapshotResult(nullDiagnostics).p_control, base.price_last);
+
+  const absentDiagnostics = structuredClone(base);
+  delete absentDiagnostics.vwap_last_minute;
+  delete absentDiagnostics.change_24h_pct;
+  assert.equal(parseGetMarketSnapshotResult(absentDiagnostics).p_control, base.price_last);
+});
+
+test("required last_60m snapshot fields remain fail closed", async () => {
+  const base = parseMcpToolEnvelope(await fixture("cryptostruct-market-snapshot.synthetic.json"), "get_market_snapshot");
+
+  for (const field of ["trades", "turnover_usd", "spread_bps_avg"]) {
+    const candidate = structuredClone(base);
+    delete candidate.last_60m[field];
+    assert.throws(
+      () => parseGetMarketSnapshotResult(candidate),
+      new RegExp(`last_60m\\.${field}`,"u"),
+    );
+  }
+
+  for (const side of ["bid", "ask"]) {
+    const candidate = structuredClone(base);
+    delete candidate.last_60m.top1_depth_usd[side];
+    assert.throws(
+      () => parseGetMarketSnapshotResult(candidate),
+      new RegExp(`top1_depth_usd\\.${side}`,"u"),
+    );
+  }
+});
+
 test("source schema fingerprint is deterministic and source-contract hash is product-frozen", async () => {
   const raw = parseMcpToolEnvelope(await fixture("cryptostruct-market-snapshot.synthetic.json"), "get_market_snapshot");
   assert.equal(sourceSchemaFingerprint(raw), sourceSchemaFingerprint(structuredClone(raw)));
