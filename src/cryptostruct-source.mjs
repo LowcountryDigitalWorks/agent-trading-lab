@@ -30,6 +30,41 @@ export const COHORT_FLOORS = Object.freeze({
   min_unique_resolved_events: 100,
   min_paired_eligible_decisions: 300,
 });
+export const CRYPTOSTRUCT_REJECTION_REASON_CODES = Object.freeze([
+  "independent_criteria_changed",
+  "frozen_instrument_changed",
+  "frozen_instrument_code_changed",
+  "deadline_changed",
+  "event_not_open_or_unresolved",
+  "wrong_venue",
+  "not_binary_prediction",
+  "orientation_ambiguous",
+  "price_semantics_unqualified",
+  "unstable_instrument_id",
+  "malformed_instrument",
+  "snapshot_instrument_mismatch",
+  "request_not_started_at_cutoff",
+  "response_outside_cutoff_window",
+  "stale_or_future_snapshot_capture",
+  "malformed_timing",
+  "low_trades_60m",
+  "low_turnover_60m",
+  "low_top1_depth",
+  "invalid_or_wide_spread",
+  "provenance_missing",
+  "malformed_or_undocumented_source",
+  "rate_limited_primary_observation",
+  "source_error",
+  "source_unavailable",
+  "tool_removed",
+  "tool_schema_changed",
+  "required_fields_missing",
+  "rate_limited",
+  "auth_required",
+  "premium_required",
+  "purchase_required",
+  "license_changed"
+]);
 
 const PROHIBITED_PUBLIC_FIELDS = new Set([
   "cryptostruct_instrument_id",
@@ -490,6 +525,9 @@ export function createResolutionState(spec) {
 export function applyIndependentResolution(state, spec, evidence) {
   validateIndependentEventSpec(spec);
   assert(state?.state === "pending", "resolution state is already terminal");
+  if (state.event_id !== spec.event_id || state.independent_event_spec_hash !== independentEventSpecHash(spec)) {
+    return Object.freeze({ ...state, state: "invalid", reason: "independent_criteria_changed" });
+  }
   plain(evidence, "resolution evidence");
   if (evidence.source_basis === "cryptostruct_price" || evidence.source_basis === "market_price") {
     return Object.freeze({ ...state, state: "invalid", reason: "price_based_resolution_prohibited" });
@@ -525,10 +563,11 @@ export function classifyCryptoStructAccessFailure(code, { rateLimitPastCutoff = 
   return { fail_closed: true, state: "INELIGIBLE", reason: "source_error", owner_gate: false };
 }
 
-export function buildPrivateCryptoStructEvidenceEvent({ sequence, prev_record_hash, payload, recorded_at_utc }) {
+export function buildPrivateCryptoStructEvidenceEvent({ run_id, sequence, prev_record_hash, payload, recorded_at_utc }) {
+  nonEmpty(run_id, "run_id");
   validatePrivateEvidencePayload(payload);
   return buildEvidenceRecord({
-    run_id: `cryptostruct:${payload.independent_event_id}`,
+    run_id,
     sequence,
     event_type: "metric",
     recorded_at_utc,
@@ -588,7 +627,10 @@ export function validatePrivateEvidencePayload(payload) {
   nonNegative(payload.spread_bps, "spread_bps");
   nonNegative(payload.top1_depth_usd, "top1_depth_usd");
   assert(typeof payload.eligibility === "boolean", "eligibility must be boolean");
-  assert(payload.rejection_reason === null || typeof payload.rejection_reason === "string", "rejection_reason must be null/string");
+  assert(
+    payload.rejection_reason === null || CRYPTOSTRUCT_REJECTION_REASON_CODES.includes(payload.rejection_reason),
+    "rejection_reason must be null or a canonical Release 0.5 reason code",
+  );
   assert(payload.response_content_hash === null || isSha256Hex(payload.response_content_hash), "response_content_hash must be null/SHA-256");
   assert(payload.official_outcome === null || new Set(["YES", "NO"]).has(payload.official_outcome), "official_outcome must be null/YES/NO");
   assert(payload.resolution_evidence_hash === null || isSha256Hex(payload.resolution_evidence_hash), "resolution_evidence_hash must be null/SHA-256");
@@ -615,7 +657,8 @@ export function buildSanitizedPublicEvidence(privateEvents, { qualification, sou
     validatePrivateEvidencePayload(payload);
     if (payload.eligibility) eligible += 1;
     else {
-      const reason = payload.rejection_reason ?? "unspecified";
+      assert(payload.rejection_reason !== null, "ineligible private evidence requires canonical rejection_reason");
+      const reason = payload.rejection_reason;
       rejection_reasons[reason] = (rejection_reasons[reason] ?? 0) + 1;
     }
     const category = payload.category;
@@ -640,6 +683,11 @@ export function buildSanitizedPublicEvidence(privateEvents, { qualification, sou
 }
 
 export function assertPublicEvidenceSanitized(value) {
+  plain(value, "public evidence");
+  plain(value.rejection_reasons, "public rejection_reasons");
+  for (const reason of Object.keys(value.rejection_reasons)) {
+    assert(CRYPTOSTRUCT_REJECTION_REASON_CODES.includes(reason), `public evidence contains non-canonical rejection reason: ${reason}`);
+  }
   const serialized = canonicalSerialize(value);
   for (const field of PROHIBITED_PUBLIC_FIELDS) {
     assert(!serialized.includes(`\"${field}\"`), `public evidence leaks prohibited field: ${field}`);

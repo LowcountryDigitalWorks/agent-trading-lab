@@ -40,37 +40,204 @@
     "future_cost_usd"
   ],
   "properties": {
-    "schema_version": { "const": "cryptostruct-private-evidence.v1" },
-    "independent_event_id": { "type": "string", "minLength": 1 },
-    "independent_event_spec_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
-    "cryptostruct_instrument_id": { "type": "string", "minLength": 1 },
-    "underlying_venue": { "const": "polymarket" },
-    "orientation": { "enum": ["YES", "UP"] },
-    "category": { "enum": ["WEATHER_CLIMATE", "MACROECONOMICS", "SCIENCE_TECHNOLOGY", "ENTERTAINMENT_CULTURE"] },
-    "source_tool": { "enum": ["search_instruments", "get_instrument", "get_market_snapshot"] },
-    "source_version": { "type": "string", "minLength": 1 },
-    "scheduled_cutoff_utc": { "type": "string", "format": "date-time" },
-    "request_start_utc": { "type": "string", "format": "date-time" },
-    "request_complete_utc": { "type": "string", "format": "date-time" },
-    "capture_timestamp_utc": { "type": "string", "format": "date-time" },
-    "p_control": { "type": "number", "minimum": 0, "maximum": 1 },
-    "trades_60m": { "type": "integer", "minimum": 0 },
-    "turnover_usd_60m": { "type": "number", "minimum": 0 },
-    "spread_bps": { "type": "number", "minimum": 0 },
-    "top1_depth_usd": { "type": "number", "minimum": 0 },
-    "eligibility": { "type": "boolean" },
-    "rejection_reason": { "type": ["string", "null"] },
-    "response_content_hash": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
-    "frozen_deadline_utc": { "type": "string", "format": "date-time" },
-    "official_outcome": { "enum": ["YES", "NO", null] },
-    "resolution_evidence_hash": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
-    "treatment_context_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
-    "future_model_config_hash": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
-    "future_p_yes": { "type": ["number", "null"], "minimum": 0.01, "maximum": 0.99 },
-    "future_treatment_status": { "type": ["string", "null"] },
-    "future_latency_ms": { "type": ["integer", "null"], "minimum": 0 },
-    "future_input_tokens": { "type": ["integer", "null"], "minimum": 0 },
-    "future_output_tokens": { "type": ["integer", "null"], "minimum": 0 },
-    "future_cost_usd": { "type": ["number", "null"], "minimum": 0 }
+    "schema_version": {
+      "const": "cryptostruct-private-evidence.v1"
+    },
+    "independent_event_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "independent_event_spec_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "cryptostruct_instrument_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "underlying_venue": {
+      "const": "polymarket"
+    },
+    "orientation": {
+      "enum": [
+        "YES",
+        "UP"
+      ]
+    },
+    "category": {
+      "enum": [
+        "WEATHER_CLIMATE",
+        "MACROECONOMICS",
+        "SCIENCE_TECHNOLOGY",
+        "ENTERTAINMENT_CULTURE"
+      ]
+    },
+    "source_tool": {
+      "enum": [
+        "search_instruments",
+        "get_instrument",
+        "get_market_snapshot"
+      ]
+    },
+    "source_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scheduled_cutoff_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "request_start_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "request_complete_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "capture_timestamp_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "p_control": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "trades_60m": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "turnover_usd_60m": {
+      "type": "number",
+      "minimum": 0
+    },
+    "spread_bps": {
+      "type": "number",
+      "minimum": 0
+    },
+    "top1_depth_usd": {
+      "type": "number",
+      "minimum": 0
+    },
+    "eligibility": {
+      "type": "boolean"
+    },
+    "rejection_reason": {
+      "enum": [
+        "independent_criteria_changed",
+        "frozen_instrument_changed",
+        "frozen_instrument_code_changed",
+        "deadline_changed",
+        "event_not_open_or_unresolved",
+        "wrong_venue",
+        "not_binary_prediction",
+        "orientation_ambiguous",
+        "price_semantics_unqualified",
+        "unstable_instrument_id",
+        "malformed_instrument",
+        "snapshot_instrument_mismatch",
+        "request_not_started_at_cutoff",
+        "response_outside_cutoff_window",
+        "stale_or_future_snapshot_capture",
+        "malformed_timing",
+        "low_trades_60m",
+        "low_turnover_60m",
+        "low_top1_depth",
+        "invalid_or_wide_spread",
+        "provenance_missing",
+        "malformed_or_undocumented_source",
+        "rate_limited_primary_observation",
+        "source_error",
+        "source_unavailable",
+        "tool_removed",
+        "tool_schema_changed",
+        "required_fields_missing",
+        "rate_limited",
+        "auth_required",
+        "premium_required",
+        "purchase_required",
+        "license_changed",
+        null
+      ]
+    },
+    "response_content_hash": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "frozen_deadline_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "official_outcome": {
+      "enum": [
+        "YES",
+        "NO",
+        null
+      ]
+    },
+    "resolution_evidence_hash": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "treatment_context_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "future_model_config_hash": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "future_p_yes": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0.01,
+      "maximum": 0.99
+    },
+    "future_treatment_status": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "future_latency_ms": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "future_input_tokens": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "future_output_tokens": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "future_cost_usd": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    }
   }
 }

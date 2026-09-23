@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import {
   COHORT_FLOORS,
   CRYPTOSTRUCT_ALLOWED_TOOLS,
+  CRYPTOSTRUCT_REJECTION_REASON_CODES,
   CRYPTOSTRUCT_MCP_ENDPOINT,
   CRYPTOSTRUCT_UNDERLYING_VENUE,
   QUALITY_GATE,
@@ -279,16 +280,38 @@ test("duplicate spec, correlated cluster, and semantic alias are deterministical
   assert.deepEqual(result.rejected.map(x=>x.reason).sort(),["correlated_event_cluster","duplicate_independent_event_spec","semantic_alias_duplicate"].sort());
 });
 
-test("independent resolution accepts official authority evidence and forbids price-based resolution", () => {
+test("independent resolution enforces the exact frozen IndependentEventSpec", () => {
   const s=spec();
   const pending=createResolutionState(s);
-  const resolved=applyIndependentResolution(pending,s,{
+  const evidence={
     status:"resolved",source_basis:"official_authority",authority:s.resolution_authority,
     reference:s.resolution_reference,outcome:"YES",retrieved_at_utc:"2026-10-02T12:00:00.000Z",
-    evidence_hash:sha256Hex("official report")
-  });
+    evidence_hash:sha256Hex("official report"),
+  };
+  const resolved=applyIndependentResolution(pending,s,evidence);
   assert.equal(resolved.state,"resolved");
   assert.equal(resolved.outcome,"YES");
+
+  for (const changed of [
+    spec({criteria_hash:sha256Hex("changed criteria")}),
+    spec({
+      canonical_question:"Will a materially different criterion be satisfied?",
+      yes_condition:"YES under materially different criteria.",
+      no_condition:"NO under materially different criteria.",
+    }),
+    spec({event_id:"different-independent-event"}),
+  ]) {
+    const invalid=applyIndependentResolution(pending,changed,{
+      ...evidence,
+      authority:changed.resolution_authority,
+      reference:changed.resolution_reference,
+    });
+    assert.equal(invalid.state,"invalid");
+    assert.equal(invalid.reason,"independent_criteria_changed");
+    assert.equal(pending.state,"pending");
+    assert.equal(pending.independent_event_spec_hash,independentEventSpecHash(s));
+  }
+
   const prohibited=applyIndependentResolution(pending,s,{status:"resolved",source_basis:"cryptostruct_price"});
   assert.equal(prohibited.state,"invalid");
   assert.equal(prohibited.reason,"price_based_resolution_prohibited");
@@ -324,15 +347,92 @@ test("rate limit on the primary cutoff is ineligible and never substitutes a lat
   assert.deepEqual(result,{fail_closed:true,state:"INELIGIBLE",reason:"rate_limited_primary_observation",owner_gate:false});
 });
 
-test("private evidence reuses EvidenceEvent hash chain and remains deterministic", () => {
-  const first=buildPrivateCryptoStructEvidenceEvent({sequence:0,prev_record_hash:null,payload:privatePayload(),recorded_at_utc:CUTOFF});
-  const second=buildPrivateCryptoStructEvidenceEvent({sequence:1,prev_record_hash:first.record_hash,payload:privatePayload({eligibility:false,rejection_reason:"low_trades_60m",trades_60m:1}),recorded_at_utc:"2026-09-30T21:00:00.100Z"});
+test("private evidence uses one caller-supplied run_id across multiple independent events", () => {
+  const runId="release05-bounded-proof-001";
+  const first=buildPrivateCryptoStructEvidenceEvent({
+    run_id:runId, sequence:0, prev_record_hash:null, payload:privatePayload(), recorded_at_utc:CUTOFF,
+  });
+  const second=buildPrivateCryptoStructEvidenceEvent({
+    run_id:runId,
+    sequence:1,
+    prev_record_hash:first.record_hash,
+    payload:privatePayload({
+      independent_event_id:"science-event-b",
+      independent_event_spec_hash:sha256Hex("independent event B spec"),
+      cryptostruct_instrument_id:"pm-science-yes-002",
+      category:"SCIENCE_TECHNOLOGY",
+      eligibility:false,
+      rejection_reason:"low_trades_60m",
+      trades_60m:1,
+    }),
+    recorded_at_utc:"2026-09-30T21:00:00.100Z",
+  });
+  assert.equal(first.run_id,runId);
+  assert.equal(second.run_id,runId);
+  assert.notEqual(first.payload.independent_event_id,second.payload.independent_event_id);
+  assert.equal(second.prev_record_hash,first.record_hash);
   assert.equal(first.record_hash,computeEvidenceRecordHash(first));
+  assert.equal(second.record_hash,computeEvidenceRecordHash(second));
   assert.equal(validateLedgerRecords([first,second]).valid,true);
+
+  const changedRun=buildPrivateCryptoStructEvidenceEvent({
+    run_id:"release05-bounded-proof-OTHER",
+    sequence:1,
+    prev_record_hash:first.record_hash,
+    payload:second.payload,
+    recorded_at_utc:"2026-09-30T21:00:00.100Z",
+  });
+  assert.equal(validateLedgerRecords([first,changedRun]).valid,false);
+});
+
+test("private/public evidence accept only canonical non-sensitive rejection reason codes", async () => {
+  const runId="release05-rejection-proof";
+  const canonical=buildPrivateCryptoStructEvidenceEvent({
+    run_id:runId,
+    sequence:0,
+    prev_record_hash:null,
+    payload:privatePayload({eligibility:false,rejection_reason:"low_trades_60m",trades_60m:1}),
+    recorded_at_utc:CUTOFF,
+  });
+  assert.equal(canonical.payload.rejection_reason,"low_trades_60m");
+
+  for (const unsafe of [
+    "arbitrary free-form provider text",
+    "pm-market-123456",
+    "CryptoStruct upstream error for question: Will secret source text leak?",
+  ]) {
+    assert.throws(
+      () => buildPrivateCryptoStructEvidenceEvent({
+        run_id:runId,
+        sequence:0,
+        prev_record_hash:null,
+        payload:privatePayload({eligibility:false,rejection_reason:unsafe}),
+        recorded_at_utc:CUTOFF,
+      }),
+      /canonical Release 0.5 reason code/u,
+    );
+  }
+
+  const publicEvidence=buildSanitizedPublicEvidence([canonical],{
+    qualification:"BLOCKED",
+    source_contract_hash:sha256Hex("source contract"),
+  });
+  assert.deepEqual(publicEvidence.rejection_reasons,{low_trades_60m:1});
+  assert.equal(JSON.stringify(publicEvidence).includes("pm-market-123456"),false);
+  assert.equal(JSON.stringify(publicEvidence).includes("upstream error"),false);
+  assert.throws(
+    () => assertPublicEvidenceSanitized({...publicEvidence,rejection_reasons:{"pm-market-123456":1}}),
+    /non-canonical rejection reason/u,
+  );
+
+  const privateSchema=JSON.parse(await readFile(new URL("../schemas/cryptostruct-private-evidence.v1.schema.json",import.meta.url),"utf8"));
+  const publicSchema=JSON.parse(await readFile(new URL("../schemas/cryptostruct-public-evidence.v1.schema.json",import.meta.url),"utf8"));
+  assert.deepEqual(privateSchema.properties.rejection_reason.enum,[...CRYPTOSTRUCT_REJECTION_REASON_CODES,null]);
+  assert.deepEqual(publicSchema.properties.rejection_reasons.propertyNames.enum,CRYPTOSTRUCT_REJECTION_REASON_CODES);
 });
 
 test("sanitized public evidence excludes per-market prices, IDs, and raw/reconstructive data", () => {
-  const event=buildPrivateCryptoStructEvidenceEvent({sequence:0,prev_record_hash:null,payload:privatePayload(),recorded_at_utc:CUTOFF});
+  const event=buildPrivateCryptoStructEvidenceEvent({run_id:"release05-synthetic-proof",sequence:0,prev_record_hash:null,payload:privatePayload(),recorded_at_utc:CUTOFF});
   const publicEvidence=buildSanitizedPublicEvidence([event],{qualification:"BLOCKED",source_contract_hash:sha256Hex("source contract")});
   assert.equal(publicEvidence.sample_records,1);
   assert.equal(publicEvidence.eligible_records,1);

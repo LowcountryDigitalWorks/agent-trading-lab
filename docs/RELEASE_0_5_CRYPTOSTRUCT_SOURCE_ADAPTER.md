@@ -153,7 +153,9 @@ Duplicate/correlation controls deterministically reject duplicate IndependentEve
 
 CryptoStruct/Polymarket price or implied market outcome is never authoritative settlement.
 
-The resolution state starts `pending` and becomes either:
+The resolution state starts `pending` and freezes both the independent `event_id` and exact `IndependentEventSpec` hash. Resolution evidence is evaluated only when the supplied event/spec still matches those frozen identities. A changed event ID, criteria hash, canonical question, YES/NO criteria, or any other spec field fails closed as `independent_criteria_changed` and is not scored.
+
+The state becomes either:
 
 - `resolved` only from the predeclared official authority/reference with unambiguous YES/NO outcome plus retrieval timestamp and evidence hash; or
 - `invalid` when unavailable, ambiguous, disputed, materially changed, authority-mismatched, or price-derived.
@@ -164,9 +166,9 @@ Invalid events are not scored.
 
 ### Private cutoff evidence
 
-The private payload schema is `cryptostruct-private-evidence.v1`. It is carried inside the existing Release 0.1 `EvidenceEvent v1` envelope; the envelope supplies evidence sequence, previous-record hash, and record hash.
+The private payload schema is `cryptostruct-private-evidence.v1`. It is carried inside the existing Release 0.1 `EvidenceEvent v1` envelope; the envelope supplies evidence sequence, previous-record hash, and record hash. The qualification/proof `run_id` is supplied by the caller and remains stable across records for multiple independent events in one chained run; event identity stays inside the payload.
 
-Private payload fields include the independent event/spec identity, CryptoStruct instrument ID, Polymarket orientation, source tool/version, timing, p_control, 60-minute activity/quality metrics, eligibility/rejection, optional response hash, frozen deadline, independent resolution evidence, treatment-context hash, and nullable future model/result accounting fields.
+Private payload fields include the independent event/spec identity, CryptoStruct instrument ID, Polymarket orientation, source tool/version, timing, p_control, 60-minute activity/quality metrics, eligibility/rejection, optional response hash, frozen deadline, independent resolution evidence, treatment-context hash, and nullable future model/result accounting fields. `rejection_reason` is a closed Release 0.5 canonical reason code, never provider/source free text.
 
 Full L2, raw MCP archives, unrelated fields, and reconstructive venue datasets are not retained by default.
 
@@ -174,7 +176,7 @@ Full L2, raw MCP archives, unrelated fields, and reconstructive venue datasets a
 
 `cryptostruct-public-evidence.v1` is aggregate-only. It may contain provider/venue labels, aggregate sample and eligibility counts, rejection/category counts, source-contract hashes, and `QUALIFIED` / `INSUFFICIENT` / `BLOCKED` disposition.
 
-Public evidence explicitly rejects per-market instrument IDs, prices/p_control, trades, turnover, spread, depth, raw responses, raw orderbooks, and reconstructive datasets.
+Public evidence explicitly rejects per-market instrument IDs, prices/p_control, trades, turnover, spread, depth, raw responses, raw orderbooks, and reconstructive datasets. Public rejection aggregates may use only the same closed canonical non-sensitive reason-code set as private evidence; arbitrary provider error text, instrument IDs, question text, or other source-derived strings cannot become public aggregate keys.
 
 ## Free-tier fail-closed behavior
 

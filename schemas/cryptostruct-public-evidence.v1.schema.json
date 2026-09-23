@@ -19,17 +19,94 @@
     "reconstructive_dataset_retained"
   ],
   "properties": {
-    "schema_version": { "const": "cryptostruct-public-evidence.v1" },
-    "provider": { "const": "cryptostruct" },
-    "underlying_venue": { "const": "polymarket" },
-    "sample_records": { "type": "integer", "minimum": 0 },
-    "eligible_records": { "type": "integer", "minimum": 0 },
-    "ineligible_records": { "type": "integer", "minimum": 0 },
-    "rejection_reasons": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
-    "category_counts": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
-    "source_contract_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
-    "qualification": { "enum": ["QUALIFIED", "INSUFFICIENT", "BLOCKED"] },
-    "raw_responses_retained": { "const": false },
-    "reconstructive_dataset_retained": { "const": false }
+    "schema_version": {
+      "const": "cryptostruct-public-evidence.v1"
+    },
+    "provider": {
+      "const": "cryptostruct"
+    },
+    "underlying_venue": {
+      "const": "polymarket"
+    },
+    "sample_records": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "eligible_records": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "ineligible_records": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "rejection_reasons": {
+      "type": "object",
+      "propertyNames": {
+        "enum": [
+          "independent_criteria_changed",
+          "frozen_instrument_changed",
+          "frozen_instrument_code_changed",
+          "deadline_changed",
+          "event_not_open_or_unresolved",
+          "wrong_venue",
+          "not_binary_prediction",
+          "orientation_ambiguous",
+          "price_semantics_unqualified",
+          "unstable_instrument_id",
+          "malformed_instrument",
+          "snapshot_instrument_mismatch",
+          "request_not_started_at_cutoff",
+          "response_outside_cutoff_window",
+          "stale_or_future_snapshot_capture",
+          "malformed_timing",
+          "low_trades_60m",
+          "low_turnover_60m",
+          "low_top1_depth",
+          "invalid_or_wide_spread",
+          "provenance_missing",
+          "malformed_or_undocumented_source",
+          "rate_limited_primary_observation",
+          "source_error",
+          "source_unavailable",
+          "tool_removed",
+          "tool_schema_changed",
+          "required_fields_missing",
+          "rate_limited",
+          "auth_required",
+          "premium_required",
+          "purchase_required",
+          "license_changed"
+        ]
+      },
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "category_counts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "source_contract_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "qualification": {
+      "enum": [
+        "QUALIFIED",
+        "INSUFFICIENT",
+        "BLOCKED"
+      ]
+    },
+    "raw_responses_retained": {
+      "const": false
+    },
+    "reconstructive_dataset_retained": {
+      "const": false
+    }
   }
 }
