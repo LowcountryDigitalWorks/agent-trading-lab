@@ -2,7 +2,7 @@
 
 Agent Trading Lab is a Lowcountry Digital Works experimental research repository for measuring whether bounded decision layers add value over deterministic baselines under identical evidence and risk assumptions.
 
-Release 0.1 established deterministic measurement contracts and the evidence ledger. Releases 0.2–0.3 completed the bounded Phase 0A engineering measurement. **Release 0.4 adds only the authorized Phase 0B forecast-measurement harness and Kalshi public-source qualification**. It does not call a model, begin forward OOS collection, trade, or simulate P&L.
+Release 0.1 established deterministic measurement contracts and the evidence ledger. Releases 0.2–0.3 completed the bounded Phase 0A engineering measurement. Release 0.4 established the deterministic Phase 0B forecast-measurement harness. **Release 0.5 adds only the authorized docs/synthetic CryptoStruct source adapter and evidence-qualification contract**. It does not access live CryptoStruct Data, call a model, begin forward OOS collection, trade, or simulate P&L.
 
 This remains experimental measurement infrastructure, not an alpha claim or investment product. Release 0.4 uses only bounded unauthenticated public Kalshi reads for source qualification and synthetic/mock treatment for forecast-harness tests.
 
@@ -47,3 +47,13 @@ Release 0.4 implements the market-midpoint control, deterministic one-market-per
 Routine CI remains offline and synthetic. Exactly one separately armed live qualification proof may issue at most 250 public unauthenticated GETs while inspecting at most 50 candidate events. Raw live response bodies are not retained in the repository or public proof artifact.
 
 See [Release 0.4 Phase 0B harness and source qualification](docs/RELEASE_0_4_PHASE_0B_HARNESS.md).
+
+## Release 0.5 CryptoStruct source adapter
+
+Release 0.5 replaces the planned Phase 0B source boundary with a provider-neutral CryptoStruct adapter, initially limited to **Polymarket through CryptoStruct**. It implements the documented keyless MCP contract for `search_instruments`, `get_instrument`, and `get_market_snapshot`, deterministic IndependentEventSpec/source-quality/selector/resolution/evidence helpers, and synthetic fixtures.
+
+Operational CryptoStruct Data access is deliberately hard-gated: this candidate makes **no real data-returning CryptoStruct call**. A future bounded live proof requires separate owner acceptance of the then-current CryptoStruct Data License plus ORCH4 authorization.
+
+The exact control probability contract is `p_control = get_market_snapshot.last_price` for an eligible, unambiguously oriented binary YES/Up proposition. CryptoStruct-derived market data is excluded from future treatment context.
+
+See [Release 0.5 CryptoStruct source adapter](docs/RELEASE_0_5_CRYPTOSTRUCT_SOURCE_ADAPTER.md).

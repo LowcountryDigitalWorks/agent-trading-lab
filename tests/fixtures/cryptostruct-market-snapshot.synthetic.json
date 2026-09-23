@@ -1,0 +1,15 @@
+{
+  "structuredContent": {
+    "snapshot": {
+      "instrument_id": "pm-weather-yes-001",
+      "captured_at_utc": "2026-09-30T21:00:00.020Z",
+      "last_price": 0.61,
+      "trades_60m": 8,
+      "turnover_usd_60m": 240.5,
+      "spread_bps": 500,
+      "top1_depth_usd": 75,
+      "source_surface": "get_market_snapshot",
+      "source_version": "mcp-free"
+    }
+  }
+}

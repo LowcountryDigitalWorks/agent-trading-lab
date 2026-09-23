@@ -1,0 +1,8 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"instrument\":{\"instrument_id\":\"pm-weather-yes-001\",\"code\":\"PM-WEATHER-YES-001\",\"venue\":\"Polymarket\",\"instrument_class\":\"prediction_binary\",\"state\":\"open\",\"event_cluster_id\":\"weather-charleston-2026-10-01\",\"question\":\"Will the official high temperature reach at least 90 F?\",\"orientation\":\"YES\",\"close_time_utc\":\"2026-10-01T21:00:00.000Z\",\"price_semantics\":\"probability_0_1\",\"provenance\":{\"source\":\"CryptoStruct\",\"source_version\":\"mcp-free\",\"stable_id\":true}}}"
+    }
+  ]
+}

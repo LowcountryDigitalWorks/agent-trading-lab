@@ -40,3 +40,14 @@ Release 0.4 adds no npm runtime or development dependencies. The Kalshi integrat
 The repository retains source references, code, synthetic fixtures, hashes and sanitized aggregate qualification evidence only. Raw live Kalshi response bodies and bulk external market archives are not committed or retained in the public proof artifact.
 
 Public endpoint access does not establish unrestricted redistribution rights. Exact normalized forward-snapshot retention/redistribution terms remain unresolved before model-scored OOS, so Release 0.4 does not claim that raw source data may be republished.
+
+## Release 0.5 CryptoStruct
+
+Release 0.5 adds no npm runtime or development dependencies. The provider boundary is implemented with injected tool functions and synthetic fixtures only; no CryptoStruct SDK, MCP SDK, database, authentication library, or network package is introduced.
+
+Published source documentation reference: `https://cryptostruct.com/docs/mcp`.
+
+CryptoStruct operational Data access is not part of this implementation candidate. Under the accepted Product/ORCH4 contract, the first real data-returning MCP/API call constitutes an owner legal/terms gate. Development therefore does not invoke CryptoStruct, create an account/OAuth grant, enable Premium, purchase data/realtime, or access direct Polymarket/Kalshi.
+
+Public repository material is limited to code, schemas, synthetic fixtures, source/license references, hashes, aggregate/non-reconstructive evidence, and disposition. Raw CryptoStruct responses, per-market price datasets, full orderbooks, and reconstructive archives are prohibited.
+

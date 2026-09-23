@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lowcountrydigitalworks.com/schemas/independent-event-spec.v1.schema.json",
+  "title": "IndependentEventSpec v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_id",
+    "canonical_question",
+    "yes_condition",
+    "no_condition",
+    "category",
+    "deadline_utc",
+    "resolution_authority",
+    "resolution_reference",
+    "criteria_hash",
+    "allowed_cutoffs"
+  ],
+  "properties": {
+    "schema_version": { "const": "independent-event-spec.v1" },
+    "event_id": { "type": "string", "minLength": 1 },
+    "canonical_question": { "type": "string", "minLength": 1 },
+    "yes_condition": { "type": "string", "minLength": 1 },
+    "no_condition": { "type": "string", "minLength": 1 },
+    "category": {
+      "enum": [
+        "WEATHER_CLIMATE",
+        "MACROECONOMICS",
+        "SCIENCE_TECHNOLOGY",
+        "ENTERTAINMENT_CULTURE"
+      ]
+    },
+    "deadline_utc": { "type": "string", "format": "date-time" },
+    "resolution_authority": { "type": "string", "minLength": 1 },
+    "resolution_reference": { "type": "string", "minLength": 1 },
+    "criteria_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "allowed_cutoffs": {
+      "type": "array",
+      "prefixItems": [
+        { "const": "T-24h" },
+        { "const": "T-6h" },
+        { "const": "T-1h" }
+      ],
+      "minItems": 3,
+      "maxItems": 3
+    }
+  }
+}
