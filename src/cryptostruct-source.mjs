@@ -530,7 +530,7 @@ export function buildPrivateCryptoStructEvidenceEvent({ sequence, prev_record_ha
   return buildEvidenceRecord({
     run_id: `cryptostruct:${payload.independent_event_id}`,
     sequence,
-    event_type: "source_snapshot",
+    event_type: "metric",
     recorded_at_utc,
     payload,
     prev_record_hash,
