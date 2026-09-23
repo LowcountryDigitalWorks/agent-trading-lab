@@ -382,7 +382,10 @@ test("private evidence uses one caller-supplied run_id across multiple independe
     payload:second.payload,
     recorded_at_utc:"2026-09-30T21:00:00.100Z",
   });
-  assert.equal(validateLedgerRecords([first,changedRun]).valid,false);
+  assert.throws(
+    () => validateLedgerRecords([first,changedRun]),
+    /run_id changed/u,
+  );
 });
 
 test("private/public evidence accept only canonical non-sensitive rejection reason codes", async () => {
