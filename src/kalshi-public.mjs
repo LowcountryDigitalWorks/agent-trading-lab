@@ -9,6 +9,8 @@ import {
 
 export const RELEASE04_MAX_GETS = 250;
 export const RELEASE04_MAX_CANDIDATE_EVENTS = 50;
+export const KALSHI_OPEN_QUERY_STATUS = "open";
+export const KALSHI_ACTIVE_MARKET_STATUS = "active";
 
 function assert(condition, message) { if (!condition) throw new Error(message); }
 function inc(map, key, amount = 1) { map[key] = (map[key] ?? 0) + amount; }
@@ -117,7 +119,7 @@ export async function runKalshiSourceQualification({
   let events=[];
 
   try {
-    const result=await client.getJson(`/events?limit=${maxCandidateEvents}&status=open&with_nested_markets=true`);
+    const result=await client.getJson(`/events?limit=${maxCandidateEvents}&status=${KALSHI_OPEN_QUERY_STATUS}&with_nested_markets=true`);
     eventsRequestSuccess=true;
     fingerprints.events.add(result.schema_fingerprint);
     responseHashes.push(result.metadata.response_sha256);
@@ -137,10 +139,10 @@ export async function runKalshiSourceQualification({
     if (!category.eligible) { inc(rejection,category.reason); continue; }
     inc(allowedCategories,category.category);
     const eventMarkets=Array.isArray(event.markets)
-      ? event.markets.filter((m)=>m?.market_type==="binary" && m?.status==="open")
+      ? event.markets.filter((m)=>m?.market_type==="binary" && m?.status===KALSHI_ACTIVE_MARKET_STATUS)
       : [];
     markets += eventMarkets.length;
-    if (!eventMarkets.length) { inc(rejection,"no_open_binary_markets"); continue; }
+    if (!eventMarkets.length) { inc(rejection,"no_active_binary_markets"); continue; }
     if (eventMarkets.length > client.remaining) {
       budgetSkipped += 1; inc(rejection,"request_budget_insufficient_for_event_markets"); continue;
     }

@@ -18,6 +18,10 @@ The bounded adapter sends public `GET` requests only and deliberately sends no a
 
 Specialized Kalshi market-data quick-start and orderbook documentation explicitly describe these market-data reads as accessible without authentication. If the live source returns an authentication error, the qualification proof records that fact rather than creating credentials or changing source.
 
+Kalshi's current lifecycle documentation distinguishes the REST query-filter alias from the returned Market payload status. Requests use `status=open` to filter for tradable markets, while returned Market objects report `status="active"` when open for trading. Returned `inactive` means temporarily deactivated/paused; `initialized`, `closed`, `determined`, `disputed`, `amended`, `finalized`, and any unknown non-`active` status fail closed. See `https://docs.kalshi.com/getting_started/market_lifecycle`.
+
+The source-qualification adapter therefore keeps the query alias `status=open` but requires nested returned binary Market payloads to have `status="active"`. The two values must not be conflated.
+
 ## Baseline
 
 Kalshi exposes YES and NO bid ladders. Release 0.4 derives:

@@ -105,7 +105,8 @@ export function evaluateSourceEligibility({
     plain(event, "event");
     plain(market, "market");
     if (market.market_type !== undefined && market.market_type !== "binary") return { eligible: false, reason: "not_binary", baseline: null };
-    if (market.status !== "open") return { eligible: false, reason: "market_not_open", baseline: null };
+    if (market.status === "inactive") return { eligible: false, reason: "market_paused_or_halted", baseline: null };
+    if (market.status !== "active") return { eligible: false, reason: "market_not_open", baseline: null };
     if (market.paused === true || market.halted === true) return { eligible: false, reason: "market_paused_or_halted", baseline: null };
     if (!hasRules(market)) return { eligible: false, reason: "rules_unavailable", baseline: null };
     if (!hasResolution(event)) return { eligible: false, reason: "resolution_metadata_unavailable", baseline: null };

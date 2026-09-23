@@ -62,7 +62,7 @@ function market(overrides = {}) {
     ticker: "KX-WEATHER-TEST-A",
     event_ticker: "KX-WEATHER-TEST",
     market_type: "binary",
-    status: "open",
+    status: "active",
     paused: false,
     halted: false,
     close_time: CLOSE,
@@ -125,8 +125,16 @@ test("baseline fails closed for empty side, crossed book, wide spread, and malfo
   assert.throws(() => deriveKalshiBaseline({ orderbook_fp: { yes_dollars: [["x","1"]], no_dollars: [["0.5","1"]] } }), /fixed-point/u);
 });
 
-test("source eligibility rejects closed, paused, missing metadata, and stale cutoff timing", () => {
-  assert.equal(evaluateSourceEligibility({ event:event(), market:market({status:"closed"}), orderbook:book(), enforce_cutoff:false }).reason, "market_not_open");
+test("source eligibility uses current returned lifecycle states and fails closed for all non-active states", () => {
+  assert.equal(evaluateSourceEligibility({ event:event(), market:market({status:"active"}), orderbook:book(), enforce_cutoff:false }).eligible, true);
+  assert.equal(evaluateSourceEligibility({ event:event(), market:market({status:"inactive"}), orderbook:book(), enforce_cutoff:false }).reason, "market_paused_or_halted");
+  for (const status of ["initialized","closed","determined","disputed","amended","finalized","unexpected"]) {
+    assert.equal(
+      evaluateSourceEligibility({ event:event(), market:market({status}), orderbook:book(), enforce_cutoff:false }).reason,
+      "market_not_open",
+      `expected ${status} to fail closed`,
+    );
+  }
   assert.equal(evaluateSourceEligibility({ event:event(), market:market({paused:true}), orderbook:book(), enforce_cutoff:false }).reason, "market_paused_or_halted");
   assert.equal(evaluateSourceEligibility({ event:event(), market:market({rules_primary:""}), orderbook:book(), enforce_cutoff:false }).reason, "rules_unavailable");
   assert.equal(evaluateSourceEligibility({ event:event({settlement_sources:[]}), market:market(), orderbook:book(), enforce_cutoff:false }).reason, "resolution_metadata_unavailable");
@@ -300,6 +308,28 @@ test("Phase 0B evidence remains deterministic, hash-chained, and tamper-evident"
   const b=buildPhase0bEvidence({runId:"r",recordedAtUtc:CUTOFF,entries});
   assert.equal(a.digest,b.digest);
   assert.equal(a.records[1].prev_record_hash,a.records[0].record_hash);
+});
+
+test("Kalshi query filter status=open is distinct from returned market payload status=active", async () => {
+  const calls=[];
+  const e={...event(),markets:[market({status:"active"})]};
+  const responses=new Map([
+    [`${KALSHI_API_BASE}/events?limit=50&status=open&with_nested_markets=true`,{events:[e],cursor:""}],
+    [`${KALSHI_API_BASE}/markets/${market().ticker}/orderbook?depth=1`,book()],
+  ]);
+  const fetchImpl=async(url,options)=>{
+    calls.push({url,options});
+    return responses.has(url)
+      ? new Response(JSON.stringify(responses.get(url)),{status:200})
+      : new Response("not found",{status:404});
+  };
+  let clock=Date.parse(CUTOFF);
+  const client=createKalshiPublicClient({fetchImpl,now:()=>clock+=10});
+  const result=await runKalshiSourceQualification({client,retentionTermsResolved:false});
+  assert.equal(calls[0].url,`${KALSHI_API_BASE}/events?limit=50&status=open&with_nested_markets=true`);
+  assert.equal(e.markets[0].status,"active");
+  assert.equal(result.selected_eligible_events,1);
+  assert.equal(result.open_binary_markets_considered,1);
 });
 
 test("public client sends GET without authentication and enforces the 250 ceiling", async () => {
