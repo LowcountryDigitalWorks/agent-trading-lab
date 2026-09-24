@@ -7,8 +7,8 @@ Release 0.5.2 is the proof-control hardening release authorized by `LowcountryDi
 ## Boundaries
 
 - Release 0.5.1 is historically complete with final result **BLOCKED** because the browser proof lost exact call-accounting evidence. CryptoStruct was not rejected and the merged 0.5.1 normalization was not disproven.
-- Release 0.5.2 Stage 1 permits only repository code, schemas, synthetic fixtures/tests, and offline deterministic CI.
-- Live CryptoStruct calls are **not authorized** in Stage 1. Do not use browser automation for source qualification.
+- Release 0.5.2 Stage 1 is accepted/merged. Stage 2A permits only the repository-owned manual live-proof entrypoint, docs, synthetic/offline tests, and CI/workflow validation under business-operations #275 comment 5823286867.
+- Live CryptoStruct calls are **not authorized** during Stage 2A. The prior Stage 2 live authority at #275 comment 5815796874 is suspended and must not be exercised. Do not use browser automation for source qualification.
 - Future source remains CryptoStruct keyless MCP with Polymarket only through CryptoStruct.
 - Allowed future Data-returning tools remain only `search_instruments`, `get_instrument`, and `get_market_snapshot`.
 - Attempt authority must be durably reserved before dispatch; reserved sequences are never reused.
@@ -19,4 +19,4 @@ Release 0.5.2 is the proof-control hardening release authorized by `LowcountryDi
 - Sanitized proof artifacts may contain ledgers, hashes, fingerprints, counts, and classification, but no raw provider response corpus or reconstructive market dataset.
 - Runtime and development package dependencies should remain zero; incremental cash and real capital remain $0.
 
-Use a meaningful branch and PR. Routine CI must remain offline, synthetic, and deterministic. Development must not merge. Any future live proof requires fresh ORCH4 authority and current license/terms revalidation.
+Use a meaningful branch and PR. Routine CI must remain offline, synthetic, and deterministic. Development must not merge. The Stage 2A live workflow must remain workflow_dispatch-only and must not be dispatched during implementation/review. Any future live proof requires Product merge followed by fresh ORCH4 authority, exact merged identity/hash freezing, and current license/terms revalidation.
