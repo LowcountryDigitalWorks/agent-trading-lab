@@ -1,0 +1,11 @@
+{
+  "schema_version": "cryptostruct-source-mapping-record.v1",
+  "independent_event_spec_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "cryptostruct_instrument_id": "1001001",
+  "cryptostruct_code": "weather-demo-yes-001",
+  "venue": "polymarket",
+  "type": "prediction",
+  "mapping_review_timestamp": "2026-09-30T20:00:00.000Z",
+  "mapping_evidence_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "mapping_status": "VERIFIED"
+}

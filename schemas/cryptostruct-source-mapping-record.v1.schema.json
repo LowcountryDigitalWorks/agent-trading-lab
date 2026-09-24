@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lowcountrydigitalworks.com/schemas/cryptostruct-source-mapping-record.v1.schema.json",
+  "title": "CryptoStruct SourceMappingRecord v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "independent_event_spec_hash",
+    "cryptostruct_instrument_id",
+    "cryptostruct_code",
+    "venue",
+    "type",
+    "mapping_review_timestamp",
+    "mapping_evidence_hash",
+    "mapping_status"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "cryptostruct-source-mapping-record.v1"
+    },
+    "independent_event_spec_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "cryptostruct_instrument_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "cryptostruct_code": {
+      "type": "string",
+      "minLength": 1
+    },
+    "venue": {
+      "const": "polymarket"
+    },
+    "type": {
+      "const": "prediction"
+    },
+    "mapping_review_timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "mapping_evidence_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "mapping_status": {
+      "const": "VERIFIED"
+    }
+  }
+}

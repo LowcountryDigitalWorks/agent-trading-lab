@@ -2,7 +2,7 @@
 
 Agent Trading Lab is a Lowcountry Digital Works experimental research repository for measuring whether bounded decision layers add value over deterministic baselines under identical evidence and risk assumptions.
 
-Release 0.1 established deterministic measurement contracts and the evidence ledger. Releases 0.2–0.3 completed the bounded Phase 0A engineering measurement. Release 0.4 established the deterministic Phase 0B forecast-measurement harness. **Release 0.5 adds only the authorized docs/synthetic CryptoStruct source adapter and evidence-qualification contract**. It does not access live CryptoStruct Data, call a model, begin forward OOS collection, trade, or simulate P&L.
+Release 0.1 established deterministic measurement contracts and the evidence ledger. Releases 0.2–0.3 completed the bounded Phase 0A engineering measurement. Release 0.4 established the deterministic Phase 0B forecast-measurement harness. Release 0.5 established the CryptoStruct source-adapter scaffold and its single live source proof ended **BLOCKED** on live-schema mismatch. **Release 0.5.1 is the bounded offline normalization correction authorized by #272**. It adds no model, OOS, trading, or P&L scope.
 
 This remains experimental measurement infrastructure, not an alpha claim or investment product. Release 0.4 uses only bounded unauthenticated public Kalshi reads for source qualification and synthetic/mock treatment for forecast-harness tests.
 
@@ -57,3 +57,11 @@ Operational CryptoStruct Data access is deliberately hard-gated: this candidate 
 The exact control probability contract is `p_control = get_market_snapshot.last_price` for an eligible, unambiguously oriented binary YES/Up proposition. CryptoStruct-derived market data is excluded from future treatment context.
 
 See [Release 0.5 CryptoStruct source adapter](docs/RELEASE_0_5_CRYPTOSTRUCT_SOURCE_ADAPTER.md).
+
+## Release 0.5.1 live-schema normalization
+
+Release 0.5.1 preserves the Release 0.5 BLOCKED result while correcting the adapter to the already observed CryptoStruct MCP contract. It parses the JSON-RPC `result.content[].text` envelope, normalizes `price_last` and nested `last_60m` fields, uses minimum-side bid/ask top-1 depth, adds a frozen VERIFIED `SourceMappingRecord`, and records schema/source-contract fingerprints without fabricating provider-version fields.
+
+Stage 1 makes **zero additional CryptoStruct calls** and uses only synthetic fixtures plus offline deterministic CI. A replacement live proof, model-scored OOS, and trading remain separately gated.
+
+See [Release 0.5.1 live-schema normalization](docs/RELEASE_0_5_1_CRYPTOSTRUCT_LIVE_SCHEMA_NORMALIZATION.md).

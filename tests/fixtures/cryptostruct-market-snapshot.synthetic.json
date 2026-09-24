@@ -1,15 +1,12 @@
 {
-  "structuredContent": {
-    "snapshot": {
-      "instrument_id": "pm-weather-yes-001",
-      "captured_at_utc": "2026-09-30T21:00:00.020Z",
-      "last_price": 0.61,
-      "trades_60m": 8,
-      "turnover_usd_60m": 240.5,
-      "spread_bps": 500,
-      "top1_depth_usd": 75,
-      "source_surface": "get_market_snapshot",
-      "source_version": "mcp-free"
-    }
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"instrument_id\":1001001,\"code\":\"weather-demo-yes-001\",\"venue\":\"polymarket\",\"as_of\":\"2026-09-30T21:00:00.020Z\",\"price_last\":0.61,\"change_24h_pct\":1.5,\"vwap_last_minute\":0.72,\"last_60m\":{\"turnover_usd\":240.5,\"turnover_buy_usd\":140.25,\"turnover_sell_usd\":100.25,\"trades\":8,\"liquidations\":0,\"spread_bps_avg\":500,\"top1_depth_usd\":{\"bid\":75,\"ask\":110},\"top20_depth_usd\":{\"bid\":600,\"ask\":700}},\"last_24h\":{\"turnover_usd\":2400.5,\"trades\":80,\"minutes_covered\":1440}}"
+      }
+    ]
   }
 }

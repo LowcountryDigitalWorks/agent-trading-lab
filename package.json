@@ -1,8 +1,8 @@
 {
   "name": "@lowcountrydigitalworks/agent-trading-lab",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
-  "description": "Deterministic CryptoStruct source adapter and synthetic evidence qualification for the Lowcountry Digital Works Agent Trading Lab.",
+  "description": "Offline CryptoStruct live-schema normalization and evidence-contract correction for the Lowcountry Digital Works Agent Trading Lab.",
   "type": "module",
   "engines": {
     "node": ">=22"

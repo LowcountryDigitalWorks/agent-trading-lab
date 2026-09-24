@@ -1,15 +1,11 @@
 {
-  "structuredContent": {
-    "instruments": [
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [
       {
-        "instrument_id": "pm-weather-yes-001",
-        "code": "PM-WEATHER-YES-001",
-        "venue": "Polymarket",
-        "instrument_class": "prediction_binary",
-        "state": "open",
-        "event_cluster_id": "weather-charleston-2026-10-01",
-        "question": "Will the official high temperature reach at least 90 F?",
-        "orientation": "YES"
+        "type": "text",
+        "text": "{\"total_matching\":2,\"showing\":2,\"hits\":[{\"instrument_id\":1001001,\"code\":\"weather-demo-yes-001\",\"type\":\"prediction\",\"venue\":\"polymarket\",\"venue_name\":\"Polymarket\",\"base\":\"POLYMARKET_BET\",\"quote\":\"pUSD\",\"state\":\"open\",\"days_with_data\":14,\"first_day\":\"2026-09-09\",\"last_day\":\"2026-09-22\",\"total_bytes_compressed\":2749460},{\"instrument_id\":1001002,\"code\":\"weather-word-false-positive-demo\",\"type\":\"prediction\",\"venue\":\"polymarket\",\"venue_name\":\"Polymarket\",\"base\":\"POLYMARKET_BET\",\"quote\":\"pUSD\",\"state\":\"open\",\"days_with_data\":5,\"first_day\":\"2026-09-18\",\"last_day\":\"2026-09-22\",\"total_bytes_compressed\":12345}]}"
       }
     ]
   }
