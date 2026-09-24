@@ -2,7 +2,7 @@
 
 Agent Trading Lab is a Lowcountry Digital Works experimental research repository for measuring whether bounded decision layers add value over deterministic baselines under identical evidence and risk assumptions.
 
-Release 0.1 established deterministic measurement contracts and the evidence ledger. Releases 0.2–0.3 completed the bounded Phase 0A engineering measurement. Release 0.4 established the deterministic Phase 0B forecast-measurement harness. Release 0.5 established the CryptoStruct source-adapter scaffold and its single live source proof ended **BLOCKED** on live-schema mismatch. **Release 0.5.1 is the bounded offline normalization correction authorized by #272**. It adds no model, OOS, trading, or P&L scope.
+Release 0.1 established deterministic measurement contracts and the evidence ledger. Releases 0.2–0.3 completed the bounded Phase 0A engineering measurement. Release 0.4 established the deterministic Phase 0B forecast-measurement harness. Release 0.5 established the CryptoStruct source-adapter scaffold. Release 0.5.1 normalized the observed live schema, but its replacement proof ended **BLOCKED** because browser execution destroyed exact call-accounting evidence. **Release 0.5.2 hardens proof control with a deterministic repository-owned runner; Stage 1 is offline/synthetic only.**
 
 This remains experimental measurement infrastructure, not an alpha claim or investment product. Release 0.4 uses only bounded unauthenticated public Kalshi reads for source qualification and synthetic/mock treatment for forecast-harness tests.
 
@@ -65,3 +65,11 @@ Release 0.5.1 preserves the Release 0.5 BLOCKED result while correcting the adap
 Stage 1 makes **zero additional CryptoStruct calls** and uses only synthetic fixtures plus offline deterministic CI. A replacement live proof, model-scored OOS, and trading remain separately gated.
 
 See [Release 0.5.1 live-schema normalization](docs/RELEASE_0_5_1_CRYPTOSTRUCT_LIVE_SCHEMA_NORMALIZATION.md).
+
+## Release 0.5.2 deterministic proof runner
+
+Release 0.5.2 adds a repository-owned Node proof-control runner that durably reserves each Data-returning call attempt before dispatch, fsyncs an append-only hash-chained call ledger, enforces attempted-call and unique-candidate ceilings, applies per-call and proof-wide internal timeouts, reconciles interrupted reservations without redispatch, and always finalizes a sanitized manifest/artifact before CI upload.
+
+Stage 1 makes **zero live CryptoStruct calls** and uses only injected synthetic transport plus offline deterministic tests. The merged Release 0.5.1 source semantics, quality thresholds, selector, IndependentEventSpec/SourceMappingRecord requirements, statistical contract, and model/OOS/trading exclusions remain unchanged.
+
+See [Release 0.5.2 deterministic proof runner](docs/RELEASE_0_5_2_DETERMINISTIC_PROOF_RUNNER.md).

@@ -1,8 +1,8 @@
 {
   "name": "@lowcountrydigitalworks/agent-trading-lab",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
-  "description": "Offline CryptoStruct live-schema normalization and evidence-contract correction for the Lowcountry Digital Works Agent Trading Lab.",
+  "description": "Deterministic CryptoStruct proof-control runner with durable attempt accounting and sanitized recovery artifacts.",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -14,6 +14,7 @@
     "secret:scan": "node scripts/secret-scan.mjs",
     "docs:check": "node scripts/check-doc-links.mjs",
     "security:check": "npm audit --omit=dev --audit-level=high",
+    "proof:synthetic": "node scripts/run-release052-synthetic-proof.mjs",
     "verify": "npm run format:check && npm run lint && npm test && npm run secret:scan && npm run docs:check && npm run security:check"
   },
   "license": "Apache-2.0"

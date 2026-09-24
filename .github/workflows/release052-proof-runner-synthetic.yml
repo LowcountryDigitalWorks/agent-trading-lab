@@ -1,0 +1,67 @@
+name: Release 0.5.2 Proof Runner Synthetic
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/release052-proof-runner-synthetic.yml"
+      - "src/cryptostruct-proof-runner.mjs"
+      - "src/cryptostruct-source.mjs"
+      - "scripts/run-release052-synthetic-proof.mjs"
+      - "scripts/finalize-release052-proof.mjs"
+      - "tests/release052.test.mjs"
+      - "schemas/cryptostruct-proof-*.json"
+      - "package.json"
+      - "package-lock.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-proof-control:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Run offline synthetic proof
+        id: proof
+        continue-on-error: true
+        env:
+          RELEASE052_ARTIFACT_DIR: release052-artifact
+          RELEASE052_PROOF_RUN_ID: release052-synthetic-${{ github.run_id }}
+        run: npm run proof:synthetic
+      - name: Always reconcile and finalize sanitized artifact
+        if: always()
+        env:
+          RELEASE052_ARTIFACT_DIR: release052-artifact
+        run: |
+          if [ "${{ steps.proof.outcome }}" = "success" ]; then
+            CLASSIFICATION=QUALIFIED
+          else
+            CLASSIFICATION=BLOCKED
+          fi
+          node scripts/finalize-release052-proof.mjs \
+            --output-dir release052-artifact \
+            --classification "$CLASSIFICATION"
+      - name: Always upload sanitized proof-control artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-0.5.2-synthetic-proof-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            release052-artifact/sanitized-call-ledger.jsonl
+            release052-artifact/proof-manifest.json
+            release052-artifact/artifact-hash.txt
+      - name: Propagate synthetic runner failure
+        if: steps.proof.outcome != 'success'
+        run: exit 1
