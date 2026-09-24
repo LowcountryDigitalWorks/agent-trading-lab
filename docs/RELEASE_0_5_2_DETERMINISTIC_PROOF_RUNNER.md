@@ -207,3 +207,44 @@ npm run proof:synthetic
 ```
 
 Runtime and development package dependencies remain zero.
+
+## Stage 2A deterministic live-proof entrypoint
+
+Stage 2A adds the repository-owned operational entrypoint required for a later
+separately authorized deterministic live proof. Stage 2A itself remains
+**offline implementation only** and makes zero CryptoStruct Data-returning
+calls.
+
+The code-owned Stage 2 plan freezes:
+
+- 45 maximum attempted calls;
+- 50 maximum unique candidates;
+- 10,000 ms per-call timeout;
+- 480,000 ms whole-proof timeout;
+- five discovery queries in exact order: weather, inflation, space, AI, movie;
+- Polymarket / prediction / open filtering;
+- first-occurrence deduplication by instrument ID;
+- at most 20 deterministic deep-probe candidates;
+- serial `get_instrument` followed by `get_market_snapshot` only for
+  still-open Polymarket prediction instruments;
+- no retry and no replacement candidate after failure.
+
+The manual workflow is `.github/workflows/release052-live-proof.yml`. It uses
+`workflow_dispatch` only, `contents: read`, Node 22, and a 15-minute job
+timeout. It checks out the exact ORCH4-authorized commit and requires the
+operator-supplied proof identity, source/discovery/selector hashes, call and
+candidate ceilings, and internal timeout values to match the code-owned frozen
+material before the runner can create its first reservation.
+
+An arbitrary workflow-dispatch input is not authority. After Stage 2A is
+independently reviewed and merged, ORCH4 must revalidate current CryptoStruct
+terms, recompute the exact hashes, freeze the exact merged commit/tree and
+proof run ID, and issue a new one-proof authorization before the workflow may
+be dispatched.
+
+The workflow preserves the accepted failure-survival ordering: execute with
+`continue-on-error`, reconcile on `always()`, finalize on `always()`,
+upload only the sanitized ledger/manifest/artifact hash, then propagate
+execution failure. It introduces no browser path, direct Polymarket/Kalshi
+path, model, OOS, trading, database, paid service, runtime dependency, or
+development dependency.
