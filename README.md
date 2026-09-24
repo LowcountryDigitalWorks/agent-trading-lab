@@ -73,3 +73,16 @@ Release 0.5.2 adds a repository-owned Node proof-control runner that durably res
 Stage 1 makes **zero live CryptoStruct calls** and uses only injected synthetic transport plus offline deterministic tests. The merged Release 0.5.1 source semantics, quality thresholds, selector, IndependentEventSpec/SourceMappingRecord requirements, statistical contract, and model/OOS/trading exclusions remain unchanged.
 
 See [Release 0.5.2 deterministic proof runner](docs/RELEASE_0_5_2_DETERMINISTIC_PROOF_RUNNER.md).
+
+### Stage 2A operational entrypoint
+
+Stage 2A adds a manual-only GitHub Actions entrypoint for a future separately
+authorized Release 0.5.2 live proof. The entrypoint checks out an exact
+ORCH4-authorized commit, validates the proof identity and frozen
+source/discovery/selector hashes plus 45/50/10s/8m limits before the first
+reservation, and uses a 15-minute outer job so reconciliation/finalization can
+survive the internal proof deadline.
+
+Stage 2A itself performs **zero live CryptoStruct calls**. The workflow must not
+be dispatched until Product accepts/merges the candidate and ORCH4 issues new
+exact one-proof authority for the resulting commit/tree and hashes.
