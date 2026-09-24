@@ -149,14 +149,16 @@ The Stage 1 synthetic workflow deliberately separates:
 3. an `if: always()` upload step;
 4. propagation of runner failure only after preservation.
 
-The uploaded artifact contains only:
+The Stage 1 synthetic artifact contains only:
 
 - sanitized call ledger;
 - manifest;
 - artifact hash.
 
-No raw provider-response corpus, reconstructive market dataset, full orderbook,
-or bulk history is retained.
+A future Stage 2 live artifact may additionally contain the Stage 2A
+`proof-summary.json`, which is aggregate-only and cryptographically bound into
+the manifest/artifact hash. No raw provider-response corpus, reconstructive
+market dataset, full orderbook, or bulk history is retained.
 
 ## Source/statistical contract
 
@@ -244,7 +246,82 @@ be dispatched.
 
 The workflow preserves the accepted failure-survival ordering: execute with
 `continue-on-error`, reconcile on `always()`, finalize on `always()`,
-upload only the sanitized ledger/manifest/artifact hash, then propagate
-execution failure. It introduces no browser path, direct Polymarket/Kalshi
-path, model, OOS, trading, database, paid service, runtime dependency, or
-development dependency.
+upload only sanitized proof evidence, then propagate execution failure. It
+introduces no browser path, direct Polymarket/Kalshi path, model, OOS, trading,
+database, paid service, runtime dependency, or development dependency.
+
+### Independent semantic bundle
+
+Before runner creation, the live entrypoint requires an ORCH4-frozen
+`release052-independent-semantic-bundle.v1` plus its canonical SHA-256 hash.
+The bundle contains only independently prepared, valid
+`IndependentEventSpec` records and provider-neutral semantic aliases. It
+contains no live-discovered CryptoStruct instrument IDs/codes, prices,
+probabilities, or hindsight mappings.
+
+The deterministic matcher version is
+`release-0.5.2-exact-normalized-alias.v1`. Both the independent alias and the
+live instrument code are normalized with NFKC, lowercase conversion,
+ampersand-to-`and`, non-letter/digit separator collapse, whitespace collapse,
+and exact equality. There is no fuzzy score, LLM matching, probability use, or
+mid-run intervention.
+
+Exactly one matching independent spec can produce a VERIFIED mapping. Zero or
+multiple matches remain `semantic_mapping_unproven`. A VERIFIED result is
+materialized through the existing `SourceMappingRecord` constructor and
+validated against the matching `IndependentEventSpec`; category authority
+comes only from that validated independent spec.
+
+Missing bundle, invalid spec, or bundle-hash mismatch fails before runner
+creation and therefore before `CALL_RESERVED`.
+
+### Durable proof summary
+
+A live proof that passes pre-dispatch initialization writes
+`proof-summary.json` using schema `release052-proof-summary.v1`. The summary
+is non-reconstructive and aggregate-only. It contains:
+
+- proof identity and source/discovery/selector/semantic-bundle hashes;
+- discovery attempt/success counts and `total_matching` aggregate for each
+  predeclared query;
+- unique discovered and selected deep-probe counts;
+- instrument/snapshot attempt and success counts;
+- VERIFIED and unproven semantic counts;
+- quality pass/reject and rejection-reason counts;
+- joint `mapped_quality_pass` / `mapped_quality_reject` counts and rate;
+- allowed-category counts only among jointly mapped + quality-pass candidates;
+- source-schema-fingerprint count aggregates by tool;
+- throughput-review aggregate inputs for later Product assessment;
+- preliminary runner classification.
+
+It contains no instrument IDs, source codes, market questions, control
+probabilities, per-market prices, raw source payloads, orderbooks, or
+reconstructive market dataset.
+
+The proof finalizer computes a canonical `proof_summary_hash`, records it in
+the proof manifest, and therefore includes it in the final artifact hash.
+Synthetic proof-control remains compatible through an explicit
+`proof_summary_hash: null` contract when no summary exists. Finalization
+remains idempotent and verifies that an already-finalized manifest still
+matches the current summary hash.
+
+### Joint qualification
+
+The preliminary live qualification predicate is candidate-joint rather than
+independent-counter based. `mapped_quality_pass` increments only when the
+same candidate has:
+
+1. exactly one validated VERIFIED independent semantic mapping;
+2. a successful normalized market snapshot; and
+3. every frozen source-quality threshold passing.
+
+A mapped candidate whose quality fails increments
+`mapped_quality_reject`. A quality-passing candidate with unproven mapping
+does not contribute to either joint count. Category coverage counts only
+`mapped_quality_pass` candidates.
+
+The preliminary runner can classify QUALIFIED only when
+`mapped_quality_pass > 0` and no source-call terminal failure made the run
+BLOCKED. Development does not add or tune a post-hoc throughput threshold:
+Product reviews the durable aggregate evidence against the existing cohort
+floors after the live proof.
