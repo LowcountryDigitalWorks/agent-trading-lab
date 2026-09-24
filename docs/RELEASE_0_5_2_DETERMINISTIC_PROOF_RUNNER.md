@@ -36,6 +36,30 @@ Before any future source dispatch, the runner:
 A reserved call is consumed even if transport, parsing, the process, or the
 executor later fails.
 
+## Internal single-flight execution
+
+`executeCall()` owns a dependency-free Promise queue. The complete source-call
+lifecycle is serialized inside the runner:
+
+budget/candidate checks → durable reservation → durable dispatch → transport →
+terminal persistence.
+
+Caller concurrency such as `Promise.all()` is therefore safe: a second call
+cannot inspect budget or candidate state until the prior call has reached its
+terminal record (or rejected before reservation).
+
+## JSON-RPC request/response correlation
+
+For every HTTP-success JSON body, the runner requires both:
+
+- `jsonrpc === "2.0"`
+- returned `id === reserved numeric call_sequence` exactly
+
+This check occurs before normal MCP result parsing and before MCP error
+classification. A mismatched/string/missing ID or invalid JSON-RPC version
+fails closed as `PARSE_ERROR / jsonrpc_protocol_mismatch`, registers no
+candidate hashes, and records no source-schema fingerprint from that payload.
+
 ## Terminal states
 
 Every reservation is finalized exactly once as one of:

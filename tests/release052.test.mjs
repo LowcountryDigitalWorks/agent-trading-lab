@@ -388,11 +388,11 @@ test("duplicate candidate IDs do not consume additional unique-candidate capacit
   let invocation = 0;
   const { runner } = await makeRunner(t, {
     maxUniqueCandidates: 3,
-    invokeTool: async () => {
+    invokeTool: async ({ callSequence }) => {
       invocation += 1;
       return invocation === 1
-        ? okResponse(searchPayload([1001, 1002]))
-        : okResponse(searchPayload([1001]));
+        ? okResponse(searchPayload([1001, 1002]), { id: callSequence })
+        : okResponse(searchPayload([1001]), { id: callSequence });
     },
   });
   await runner.executeCall("search_instruments", {
@@ -539,6 +539,247 @@ test("call_sequence is monotonic and never reused", async (t) => {
   });
   assert.equal(first.call_sequence, 1);
   assert.equal(second.call_sequence, 2);
+});
+
+test("concurrent executeCall operations are single-flight with monotonic sequences", async (t) => {
+  let activeTransports = 0;
+  let maxActiveTransports = 0;
+  const { runner } = await makeRunner(t, {
+    maxAttemptedCalls: 2,
+    maxUniqueCandidates: 2,
+    invokeTool: async ({ callSequence }) => {
+      activeTransports += 1;
+      maxActiveTransports = Math.max(maxActiveTransports, activeTransports);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      activeTransports -= 1;
+      return okResponse(searchPayload([1000 + callSequence]), { id: callSequence });
+    },
+  });
+
+  const results = await Promise.all([
+    runner.executeCall("search_instruments", {
+      q: "weather",
+      class: "prediction",
+      venue: "polymarket",
+      limit: 1,
+    }),
+    runner.executeCall("search_instruments", {
+      q: "movie",
+      class: "prediction",
+      venue: "polymarket",
+      limit: 1,
+    }),
+  ]);
+
+  assert.deepEqual(results.map((result) => result.terminal_status), ["SUCCESS", "SUCCESS"]);
+  assert.equal(maxActiveTransports, 1);
+
+  const state = runner.ledgerState();
+  assert.equal(state.total_reserved_attempts, 2);
+  assert.equal(state.unique_candidate_count, 2);
+  assert.deepEqual(
+    [...state.call_states.keys()],
+    [1, 2],
+  );
+  assert.equal(
+    validateProofCallLedger(runner.ledger.records, { requireTerminalForEveryReservation: true }).valid,
+    true,
+  );
+});
+
+test("concurrent callers with one attempted-call slot reserve and dispatch exactly once", async (t) => {
+  let dispatches = 0;
+  const { runner } = await makeRunner(t, {
+    maxAttemptedCalls: 1,
+    maxUniqueCandidates: 2,
+    invokeTool: async ({ callSequence }) => {
+      dispatches += 1;
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      return okResponse(searchPayload([1001]), { id: callSequence });
+    },
+  });
+
+  const settled = await Promise.allSettled([
+    runner.executeCall("search_instruments", {
+      q: "weather",
+      class: "prediction",
+      venue: "polymarket",
+      limit: 1,
+    }),
+    runner.executeCall("search_instruments", {
+      q: "movie",
+      class: "prediction",
+      venue: "polymarket",
+      limit: 1,
+    }),
+  ]);
+
+  assert.equal(dispatches, 1);
+  assert.equal(settled.filter((item) => item.status === "fulfilled").length, 1);
+  const rejected = settled.find((item) => item.status === "rejected");
+  assert.equal(rejected.reason instanceof ProofBudgetError, true);
+  assert.equal(rejected.reason.code, "ATTEMPT_BUDGET_EXHAUSTED");
+
+  const records = runner.ledger.records;
+  assert.equal(records.filter((record) => record.record_type === "CALL_RESERVED").length, 1);
+  assert.equal(records.filter((record) => record.record_type === "CALL_DISPATCHED").length, 1);
+  assert.equal(records.filter((record) => record.record_type === "CALL_TERMINAL").length, 1);
+  assert.equal(runner.ledgerState().total_reserved_attempts, 1);
+});
+
+test("concurrent searches cannot exceed unique-candidate capacity", async (t) => {
+  let dispatches = 0;
+  const { runner } = await makeRunner(t, {
+    maxAttemptedCalls: 3,
+    maxUniqueCandidates: 1,
+    invokeTool: async ({ callSequence }) => {
+      dispatches += 1;
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      return okResponse(searchPayload([1001]), { id: callSequence });
+    },
+  });
+
+  const settled = await Promise.allSettled([
+    runner.executeCall("search_instruments", {
+      q: "weather",
+      class: "prediction",
+      venue: "polymarket",
+      limit: 1,
+    }),
+    runner.executeCall("search_instruments", {
+      q: "movie",
+      class: "prediction",
+      venue: "polymarket",
+      limit: 1,
+    }),
+  ]);
+
+  assert.equal(dispatches, 1);
+  assert.equal(settled[0].status, "fulfilled");
+  assert.equal(settled[1].status, "rejected");
+  assert.equal(settled[1].reason.code, "UNIQUE_CANDIDATE_BUDGET_EXCEEDED");
+
+  const state = runner.ledgerState();
+  assert.equal(state.total_reserved_attempts, 1);
+  assert.equal(state.unique_candidate_count, 1);
+  assert.deepEqual([...state.call_states.keys()], [1]);
+  assert.equal(
+    validateProofCallLedger(runner.ledger.records, { requireTerminalForEveryReservation: true }).valid,
+    true,
+  );
+});
+
+test("matching numeric JSON-RPC response ID remains successful", async (t) => {
+  const { runner } = await makeRunner(t, {
+    invokeTool: async ({ callSequence }) => okResponse(searchPayload([1001]), { id: callSequence }),
+  });
+  const result = await runner.executeCall("search_instruments", {
+    q: "weather",
+    class: "prediction",
+    venue: "polymarket",
+    limit: 1,
+  });
+  assert.equal(result.terminal_status, "SUCCESS");
+  assert.equal(runner.ledgerState().unique_candidate_count, 1);
+});
+
+test("mismatched numeric JSON-RPC response ID fails closed without source evidence", async (t) => {
+  const { runner } = await makeRunner(t, {
+    invokeTool: async ({ callSequence }) => okResponse(searchPayload([1001]), { id: callSequence + 1 }),
+  });
+  const result = await runner.executeCall("search_instruments", {
+    q: "weather",
+    class: "prediction",
+    venue: "polymarket",
+    limit: 1,
+  });
+  assert.equal(result.terminal_status, "PARSE_ERROR");
+  assert.equal(result.terminal.terminal_reason_code, "jsonrpc_protocol_mismatch");
+  assert.equal(result.terminal.source_schema_fingerprint, null);
+  assert.deepEqual(result.terminal.candidate_hashes, []);
+  assert.equal(runner.ledgerState().unique_candidate_count, 0);
+});
+
+test("string JSON-RPC response ID does not match numeric reservation ID", async (t) => {
+  const { runner } = await makeRunner(t, {
+    invokeTool: async ({ callSequence }) => ({
+      httpStatus: 200,
+      bodyText: JSON.stringify(mcpEnvelope(searchPayload([1001]), String(callSequence))),
+    }),
+  });
+  const result = await runner.executeCall("search_instruments", {
+    q: "weather",
+    class: "prediction",
+    venue: "polymarket",
+    limit: 1,
+  });
+  assert.equal(result.terminal_status, "PARSE_ERROR");
+  assert.equal(result.terminal.terminal_reason_code, "jsonrpc_protocol_mismatch");
+  assert.equal(runner.ledgerState().unique_candidate_count, 0);
+});
+
+test("missing or invalid JSON-RPC version fails protocol correlation", async (t) => {
+  for (const jsonrpc of [undefined, "1.0"]) {
+    const { runner } = await makeRunner(t, {
+      invokeTool: async ({ callSequence }) => {
+        const envelope = mcpEnvelope(searchPayload([1001]), callSequence);
+        if (jsonrpc === undefined) delete envelope.jsonrpc;
+        else envelope.jsonrpc = jsonrpc;
+        return { httpStatus: 200, bodyText: JSON.stringify(envelope) };
+      },
+    });
+    const result = await runner.executeCall("search_instruments", {
+      q: "weather",
+      class: "prediction",
+      venue: "polymarket",
+      limit: 1,
+    });
+    assert.equal(result.terminal_status, "PARSE_ERROR");
+    assert.equal(result.terminal.terminal_reason_code, "jsonrpc_protocol_mismatch");
+  }
+});
+
+test("JSON-RPC error envelope with matching ID is MCP_ERROR", async (t) => {
+  const { runner } = await makeRunner(t, {
+    invokeTool: async ({ callSequence }) => ({
+      httpStatus: 200,
+      bodyText: JSON.stringify({
+        jsonrpc: "2.0",
+        id: callSequence,
+        error: { code: -32000, message: "synthetic MCP failure" },
+      }),
+    }),
+  });
+  const result = await runner.executeCall("search_instruments", {
+    q: "weather",
+    class: "prediction",
+    venue: "polymarket",
+    limit: 1,
+  });
+  assert.equal(result.terminal_status, "MCP_ERROR");
+});
+
+test("JSON-RPC error envelope with wrong ID is PARSE_ERROR not MCP_ERROR", async (t) => {
+  const { runner } = await makeRunner(t, {
+    invokeTool: async ({ callSequence }) => ({
+      httpStatus: 200,
+      bodyText: JSON.stringify({
+        jsonrpc: "2.0",
+        id: callSequence + 1,
+        error: { code: -32000, message: "synthetic MCP failure" },
+      }),
+    }),
+  });
+  const result = await runner.executeCall("search_instruments", {
+    q: "weather",
+    class: "prediction",
+    venue: "polymarket",
+    limit: 1,
+  });
+  assert.equal(result.terminal_status, "PARSE_ERROR");
+  assert.equal(result.terminal.terminal_reason_code, "jsonrpc_protocol_mismatch");
+  assert.equal(result.terminal.source_schema_fingerprint, null);
+  assert.deepEqual(result.terminal.candidate_hashes, []);
 });
 
 test("mixed success/failure produces an exact attempted-call count", async (t) => {

@@ -761,6 +761,7 @@ export class DeterministicCryptoStructProofRunner {
     this.nowMs = nowMs;
     this.startedEpochMs = Date.parse(config.started_at);
     this.closed = false;
+    this.executionTail = Promise.resolve();
   }
 
   static async create({
@@ -899,7 +900,18 @@ export class DeterministicCryptoStructProofRunner {
     return reservation;
   }
 
-  async executeCall(tool, args, { instrumentId = null } = {}) {
+  async executeCall(tool, args, options = {}) {
+    const queued = this.executionTail.then(
+      () => this.executeCallExclusive(tool, args, options),
+    );
+    this.executionTail = queued.then(
+      () => undefined,
+      () => undefined,
+    );
+    return queued;
+  }
+
+  async executeCallExclusive(tool, args, { instrumentId = null } = {}) {
     const reservation = await this.reserveCall(tool, args, { instrumentId });
     const dispatch = await this.ledger.markDispatched(reservation, { dispatch_timestamp: this.clock() });
 
@@ -952,6 +964,21 @@ export class DeterministicCryptoStructProofRunner {
           completion_timestamp: this.clock(),
           terminal_status: "PARSE_ERROR",
           terminal_reason_code: "invalid_json_response",
+          http_status: rawResponse.httpStatus,
+          response_content_hash: responseContentHash,
+        });
+        return { terminal_status: terminal.terminal_status, terminal, parsed: null };
+      }
+
+      if (
+        envelope?.jsonrpc !== "2.0"
+        || envelope?.id !== reservation.call_sequence
+      ) {
+        const terminal = await this.ledger.terminal(reservation, {
+          dispatch_timestamp: dispatch.dispatch_timestamp,
+          completion_timestamp: this.clock(),
+          terminal_status: "PARSE_ERROR",
+          terminal_reason_code: "jsonrpc_protocol_mismatch",
           http_status: rawResponse.httpStatus,
           response_content_hash: responseContentHash,
         });
