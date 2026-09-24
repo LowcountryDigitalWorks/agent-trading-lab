@@ -392,17 +392,13 @@ export function parseGetMarketSnapshotResult(result) {
     "top20_depth_usd",
   ], "snapshot.last_60m");
   integerAtLeast(last60.trades, 0, "snapshot.last_60m.trades");
-  integerAtLeast(last60.liquidations, 0, "snapshot.last_60m.liquidations");
-  for (const field of ["turnover_usd", "turnover_buy_usd", "turnover_sell_usd", "spread_bps_avg"]) {
+  for (const field of ["turnover_usd", "spread_bps_avg"]) {
     nonNegative(last60[field], `snapshot.last_60m.${field}`);
   }
   const top1 = plain(last60.top1_depth_usd, "snapshot.last_60m.top1_depth_usd");
-  const top20 = plain(last60.top20_depth_usd, "snapshot.last_60m.top20_depth_usd");
   closedKeys(top1, ["bid", "ask"], "snapshot.last_60m.top1_depth_usd");
-  closedKeys(top20, ["bid", "ask"], "snapshot.last_60m.top20_depth_usd");
   for (const side of ["bid", "ask"]) {
     nonNegative(top1[side], `snapshot.last_60m.top1_depth_usd.${side}`);
-    nonNegative(top20[side], `snapshot.last_60m.top20_depth_usd.${side}`);
   }
   probability(result.price_last, "snapshot.price_last");
   const bid = top1.bid;

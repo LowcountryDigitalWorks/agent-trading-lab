@@ -274,6 +274,61 @@ test("unused snapshot diagnostics are optional and ignored by normalization", as
   assert.equal(parseGetMarketSnapshotResult(absentDiagnostics).p_control, base.price_last);
 });
 
+test("unused last_60m diagnostics are optional and ignored by normalization", async () => {
+  const base = parseMcpToolEnvelope(await fixture("cryptostruct-market-snapshot.synthetic.json"), "get_market_snapshot");
+  const expected = parseGetMarketSnapshotResult(base);
+
+  for (const field of ["turnover_buy_usd", "turnover_sell_usd", "liquidations", "top20_depth_usd"]) {
+    const candidate = structuredClone(base);
+    delete candidate.last_60m[field];
+    assert.deepEqual(parseGetMarketSnapshotResult(candidate), {
+      ...expected,
+      source_schema_fingerprint: sourceSchemaFingerprint(candidate),
+    });
+  }
+
+  const nullDiagnostics = structuredClone(base);
+  nullDiagnostics.last_60m.turnover_buy_usd = null;
+  nullDiagnostics.last_60m.turnover_sell_usd = null;
+  nullDiagnostics.last_60m.liquidations = null;
+  nullDiagnostics.last_60m.top20_depth_usd = null;
+  assert.deepEqual(parseGetMarketSnapshotResult(nullDiagnostics), {
+    ...expected,
+    source_schema_fingerprint: sourceSchemaFingerprint(nullDiagnostics),
+  });
+
+  const opaqueTop20 = structuredClone(base);
+  opaqueTop20.last_60m.top20_depth_usd = {
+    opaque: { provider_specific: true },
+    changed_shape: ["not", "normalized"],
+  };
+  assert.deepEqual(parseGetMarketSnapshotResult(opaqueTop20), {
+    ...expected,
+    source_schema_fingerprint: sourceSchemaFingerprint(opaqueTop20),
+  });
+
+  assert.equal(expected.p_control, base.price_last);
+  assert.equal(expected.trades_60m, base.last_60m.trades);
+  assert.equal(expected.turnover_usd_60m, base.last_60m.turnover_usd);
+  assert.equal(expected.spread_bps_60m_avg, base.last_60m.spread_bps_avg);
+  assert.equal(expected.top1_depth_bid_usd_60m, base.last_60m.top1_depth_usd.bid);
+  assert.equal(expected.top1_depth_ask_usd_60m, base.last_60m.top1_depth_usd.ask);
+  assert.equal(
+    expected.top1_depth_min_side_usd_60m,
+    Math.min(base.last_60m.top1_depth_usd.bid, base.last_60m.top1_depth_usd.ask),
+  );
+});
+
+test("unknown new last_60m provider fields still fail closed", async () => {
+  const base = parseMcpToolEnvelope(await fixture("cryptostruct-market-snapshot.synthetic.json"), "get_market_snapshot");
+  const candidate = structuredClone(base);
+  candidate.last_60m.unexpected_new_metric = 123;
+  assert.throws(
+    () => parseGetMarketSnapshotResult(candidate),
+    /snapshot\.last_60m contains unknown field: unexpected_new_metric/u,
+  );
+});
+
 test("required last_60m snapshot fields remain fail closed", async () => {
   const base = parseMcpToolEnvelope(await fixture("cryptostruct-market-snapshot.synthetic.json"), "get_market_snapshot");
 
