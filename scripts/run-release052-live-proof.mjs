@@ -32,6 +32,9 @@ function authorityFromEnvironment() {
     expected_max_unique_candidates: process.env.RELEASE052_EXPECTED_MAX_UNIQUE_CANDIDATES ?? "",
     expected_per_call_timeout_ms: process.env.RELEASE052_EXPECTED_PER_CALL_TIMEOUT_MS ?? "",
     expected_whole_proof_timeout_ms: process.env.RELEASE052_EXPECTED_WHOLE_PROOF_TIMEOUT_MS ?? "",
+    independent_semantic_bundle: process.env.RELEASE052_INDEPENDENT_SEMANTIC_BUNDLE_JSON ?? "",
+    expected_independent_semantic_bundle_hash:
+      process.env.RELEASE052_EXPECTED_INDEPENDENT_SEMANTIC_BUNDLE_HASH ?? "",
   };
 }
 
@@ -67,6 +70,7 @@ if (flag("--reconcile-only")) {
       runner_commit: validated.actual_runner_commit,
       proof_run_id: validated.proof_run_id,
       ...release052Stage2Hashes(),
+      independent_semantic_bundle_hash: validated.independent_semantic_bundle_hash,
       reservations: 0,
       data_returning_calls: 0,
     }));
