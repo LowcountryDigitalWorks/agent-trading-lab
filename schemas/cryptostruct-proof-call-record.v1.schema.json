@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lowcountrydigitalworks.com/schemas/cryptostruct-proof-call-record.v1.schema.json",
+  "title": "CryptoStruct deterministic proof call-ledger record v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "proof_run_id",
+    "record_sequence",
+    "record_type",
+    "call_sequence",
+    "tool",
+    "sanitized_argument_hash",
+    "instrument_id",
+    "reservation_timestamp",
+    "dispatch_timestamp",
+    "completion_timestamp",
+    "terminal_status",
+    "terminal_reason_code",
+    "http_status",
+    "response_content_hash",
+    "source_schema_fingerprint",
+    "candidate_hashes",
+    "previous_record_hash",
+    "record_hash"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "cryptostruct-proof-call-record.v1"
+    },
+    "proof_run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "record_sequence": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "record_type": {
+      "enum": [
+        "CALL_RESERVED",
+        "CALL_DISPATCHED",
+        "CALL_TERMINAL"
+      ]
+    },
+    "call_sequence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "tool": {
+      "enum": [
+        "search_instruments",
+        "get_instrument",
+        "get_market_snapshot"
+      ]
+    },
+    "sanitized_argument_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "instrument_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "reservation_timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "dispatch_timestamp": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "completion_timestamp": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "terminal_status": {
+      "enum": [
+        "SUCCESS",
+        "HTTP_ERROR",
+        "MCP_ERROR",
+        "TIMEOUT",
+        "PARSE_ERROR",
+        "RUNNER_ABORTED_AFTER_RESERVATION",
+        null
+      ]
+    },
+    "terminal_reason_code": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "http_status": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 100,
+      "maximum": 599
+    },
+    "response_content_hash": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "source_schema_fingerprint": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "candidate_hashes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      }
+    },
+    "previous_record_hash": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "record_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

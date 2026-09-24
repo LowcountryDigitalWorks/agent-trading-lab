@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lowcountrydigitalworks.com/schemas/cryptostruct-proof-manifest.v1.schema.json",
+  "title": "CryptoStruct deterministic proof manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "proof_run_id",
+    "source_contract_hash",
+    "runner_commit",
+    "runner_version",
+    "started_at",
+    "ended_at",
+    "max_attempted_calls",
+    "max_unique_candidates",
+    "per_call_timeout_ms",
+    "whole_proof_timeout_ms",
+    "discovery_plan_hash",
+    "selector_config_hash",
+    "total_reserved_attempts",
+    "terminal_status_counts",
+    "unique_candidate_count",
+    "classification",
+    "ledger_final_hash",
+    "artifact_hash"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "cryptostruct-proof-manifest.v1"
+    },
+    "proof_run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_contract_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "runner_commit": {
+      "type": "string",
+      "minLength": 1
+    },
+    "runner_version": {
+      "const": "0.5.2"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ended_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "max_attempted_calls": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "max_unique_candidates": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "per_call_timeout_ms": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "whole_proof_timeout_ms": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "discovery_plan_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "selector_config_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "total_reserved_attempts": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "terminal_status_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "SUCCESS",
+        "HTTP_ERROR",
+        "MCP_ERROR",
+        "TIMEOUT",
+        "PARSE_ERROR",
+        "RUNNER_ABORTED_AFTER_RESERVATION"
+      ],
+      "properties": {
+        "SUCCESS": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "HTTP_ERROR": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "MCP_ERROR": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "TIMEOUT": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "PARSE_ERROR": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "RUNNER_ABORTED_AFTER_RESERVATION": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "unique_candidate_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "classification": {
+      "enum": [
+        "QUALIFIED",
+        "INSUFFICIENT",
+        "BLOCKED"
+      ]
+    },
+    "ledger_final_hash": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "artifact_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}
