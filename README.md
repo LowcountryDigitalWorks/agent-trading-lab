@@ -83,6 +83,15 @@ source/discovery/selector hashes plus 45/50/10s/8m limits before the first
 reservation, and uses a 15-minute outer job so reconciliation/finalization can
 survive the internal proof deadline.
 
-Stage 2A itself performs **zero live CryptoStruct calls**. The workflow must not
-be dispatched until Product accepts/merges the candidate and ORCH4 issues new
-exact one-proof authority for the resulting commit/tree and hashes.
+Stage 2A itself performs **zero live CryptoStruct calls**. The future live
+entrypoint also requires an ORCH4-frozen, canonically hashed independent
+semantic bundle built from valid `IndependentEventSpec` records plus exact
+provider-neutral aliases. A completed initialized live proof retains an
+aggregate-only `proof-summary.json` whose hash is bound into the proof
+manifest/artifact hash. Preliminary QUALIFIED status requires at least one
+single candidate that is both VERIFIED-mapped and passes every frozen source
+quality threshold.
+
+The workflow must not be dispatched until Product accepts/merges the candidate
+and ORCH4 issues new exact one-proof authority for the resulting commit/tree,
+hashes, proof ID, and semantic bundle.
