@@ -22,8 +22,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Checkout
+      - name: Checkout exact source commit
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -37,6 +39,7 @@ jobs:
         env:
           RELEASE052_ARTIFACT_DIR: release052-artifact
           RELEASE052_PROOF_RUN_ID: release052-synthetic-${{ github.run_id }}
+          RELEASE052_RUNNER_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         run: npm run proof:synthetic
       - name: Always reconcile and finalize sanitized artifact
         if: always()
@@ -55,7 +58,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: release-0.5.2-synthetic-proof-${{ github.sha }}
+          name: release-0.5.2-synthetic-proof-${{ github.event.pull_request.head.sha || github.sha }}
           if-no-files-found: error
           retention-days: 7
           path: |

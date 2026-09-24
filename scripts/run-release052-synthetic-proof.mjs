@@ -6,7 +6,9 @@ import {
 import { cryptoStructSourceContractHash } from "../src/cryptostruct-source.mjs";
 
 const outputDir = process.env.RELEASE052_ARTIFACT_DIR ?? "release052-artifact";
-const runnerCommit = process.env.GITHUB_SHA ?? "release052-synthetic-offline";
+const runnerCommit = process.env.RELEASE052_RUNNER_COMMIT
+  ?? process.env.GITHUB_SHA
+  ?? "release052-synthetic-offline";
 const proofRunId = process.env.RELEASE052_PROOF_RUN_ID ?? "release052-synthetic-ci";
 
 function envelope(payload, id) {

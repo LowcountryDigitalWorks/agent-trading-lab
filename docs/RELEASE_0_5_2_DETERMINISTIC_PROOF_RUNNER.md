@@ -101,7 +101,7 @@ The sanitized `cryptostruct-proof-manifest.v1` records:
 
 - proof_run_id
 - source_contract_hash
-- runner commit/version
+- exact checked-out runner commit/version
 - started_at / ended_at
 - frozen call/candidate/time budgets
 - discovery-plan hash
