@@ -414,6 +414,7 @@ export class DurableProofCallLedger {
       record_sequence: this.recordSequence,
       previous_record_hash: this.previousRecordHash,
     });
+    validateProofCallLedger([...this.records, record]);
     await durableAppendLine(this.filePath, `${canonicalSerialize(record)}\n`);
     this.records.push(record);
     this.recordSequence += 1;
