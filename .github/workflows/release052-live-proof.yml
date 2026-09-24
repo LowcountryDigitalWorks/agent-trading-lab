@@ -43,6 +43,14 @@ on:
         description: ORCH4-frozen whole-proof timeout
         required: true
         type: string
+      independent_semantic_bundle_json:
+        description: ORCH4-frozen independent semantic bundle JSON
+        required: true
+        type: string
+      independent_semantic_bundle_hash:
+        description: ORCH4-frozen independent semantic bundle hash
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -63,6 +71,8 @@ jobs:
       RELEASE052_EXPECTED_MAX_UNIQUE_CANDIDATES: ${{ inputs.max_unique_candidates }}
       RELEASE052_EXPECTED_PER_CALL_TIMEOUT_MS: ${{ inputs.per_call_timeout_ms }}
       RELEASE052_EXPECTED_WHOLE_PROOF_TIMEOUT_MS: ${{ inputs.whole_proof_timeout_ms }}
+      RELEASE052_INDEPENDENT_SEMANTIC_BUNDLE_JSON: ${{ inputs.independent_semantic_bundle_json }}
+      RELEASE052_EXPECTED_INDEPENDENT_SEMANTIC_BUNDLE_HASH: ${{ inputs.independent_semantic_bundle_hash }}
     steps:
       - name: Checkout exact authorized commit
         uses: actions/checkout@v4
@@ -114,6 +124,7 @@ jobs:
           retention-days: 7
           path: |
             release052-live-artifact/sanitized-call-ledger.jsonl
+            release052-live-artifact/proof-summary.json
             release052-live-artifact/proof-manifest.json
             release052-live-artifact/artifact-hash.txt
       - name: Propagate execution failure after preservation
