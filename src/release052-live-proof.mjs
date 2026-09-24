@@ -60,7 +60,7 @@ function assert(condition, message) {
 }
 
 function positiveInteger(value, label) {
-  assert(Number.isInteger(value) && value > 0, \`\${label} must be a positive integer\`);
+  assert(Number.isInteger(value) && value > 0, `${label} must be a positive integer`);
   return value;
 }
 
@@ -70,11 +70,11 @@ function parsePositiveInteger(value, label) {
 }
 
 function exact(value, expected, label) {
-  assert(value === expected, \`\${label} mismatch\`);
+  assert(value === expected, `${label} mismatch`);
 }
 
 function validSha(value, label) {
-  assert(typeof value === "string" && SHA256_HEX.test(value), \`\${label} must be SHA-256 hex\`);
+  assert(typeof value === "string" && SHA256_HEX.test(value), `${label} must be SHA-256 hex`);
   return value;
 }
 
