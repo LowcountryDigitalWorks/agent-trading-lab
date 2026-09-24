@@ -960,7 +960,7 @@ test("runner recovery keeps persisted attempted count instead of resetting it", 
   const time = deterministicTime("2026-09-24T04:00:01.000Z");
   const resumed = await DeterministicCryptoStructProofRunner.resume({
     outputDir,
-    invokeTool: async () => okResponse(instrumentPayload(1001)),
+    invokeTool: async ({ callSequence }) => okResponse(instrumentPayload(1001), { id: callSequence }),
     clock: time.clock,
     nowMs: time.nowMs,
   });
