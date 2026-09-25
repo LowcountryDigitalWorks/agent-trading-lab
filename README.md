@@ -95,3 +95,24 @@ quality threshold.
 The workflow must not be dispatched until Product accepts/merges the candidate
 and ORCH4 issues new exact one-proof authority for the resulting commit/tree,
 hashes, proof ID, and semantic bundle.
+
+
+## Release 0.5.3A offline CryptoStruct qualification redesign
+
+Release 0.5.2 completed with an accepted **BLOCKED** source-qualification
+result: the deterministic proof controls worked, but the frozen source/mapping
+contract did not qualify. Release 0.5.3A is a separately gated **offline-only**
+feasibility redesign under business-operations #281.
+
+It adds three pre-source contracts:
+
+- sanitized, value-free parser mismatch diagnostics;
+- an IndependentEventSpec-first query/semantic plan that cannot be amended
+  from provider observations;
+- a conservative 30-unique-event quality-feasibility screen using the
+  unchanged Release 0.5.2 quality thresholds.
+
+Release 0.5.3A makes zero CryptoStruct Data-returning calls and does not
+authorize Release 0.5.3B, model/OOS work, or trading.
+
+See [Release 0.5.3A CryptoStruct qualification redesign](docs/RELEASE_0_5_3A_CRYPTOSTRUCT_QUALIFICATION_REDESIGN.md).
