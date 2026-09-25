@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lowcountrydigitalworks.com/schemas/cryptostruct-schema-diagnostic.v1.schema.json",
+  "title": "CryptoStruct sanitized schema diagnostic v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tool",
+    "source_contract_hash",
+    "parser_descriptor_version",
+    "parser_contract_hash",
+    "source_schema_fingerprint",
+    "actual_top_level_key_set_hash",
+    "actual_top_level_key_count",
+    "type_presence_map_hash",
+    "mismatch_categories",
+    "primary_category",
+    "normalized_failing_paths",
+    "missing_field_count",
+    "extra_field_count",
+    "wrong_type_count",
+    "nested_shape_count",
+    "nested_key_sets",
+    "diagnostic_hash"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "cryptostruct-schema-diagnostic.v1"
+    },
+    "tool": {
+      "enum": [
+        "search_instruments",
+        "get_instrument",
+        "get_market_snapshot"
+      ]
+    },
+    "source_contract_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "parser_descriptor_version": {
+      "const": "release-0.5.3-current-strict-parser-shape.v1"
+    },
+    "parser_contract_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "source_schema_fingerprint": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "actual_top_level_key_set_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "actual_top_level_key_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "type_presence_map_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "mismatch_categories": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "MISSING_EXPECTED_FIELD",
+          "UNEXPECTED_EXTRA_FIELD",
+          "WRONG_JSON_TYPE",
+          "NESTED_SHAPE_MISMATCH"
+        ]
+      }
+    },
+    "primary_category": {
+      "enum": [
+        "MISSING_EXPECTED_FIELD",
+        "UNEXPECTED_EXTRA_FIELD",
+        "WRONG_JSON_TYPE",
+        "NESTED_SHAPE_MISMATCH"
+      ]
+    },
+    "normalized_failing_paths": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "missing_field_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "extra_field_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "wrong_type_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "nested_shape_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "nested_key_sets": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "expected_key_set_hash",
+          "actual_key_set_hash",
+          "expected_key_count",
+          "actual_key_count"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expected_key_set_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "actual_key_set_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "expected_key_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "actual_key_count": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "diagnostic_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}
