@@ -12,8 +12,6 @@ import {
 
 export const RELEASE053B_EVENT_UNIVERSE_SCHEMA =
   "release053-independent-event-universe.v1";
-export const RELEASE053B_EVENT_UNIVERSE_HASH_SCHEMA =
-  "release053-event-universe-hash.v1";
 
 const EVENT_DATES = Object.freeze([
   "2026-09-28",
@@ -237,7 +235,7 @@ export function release053bEventUniverse() {
     .map((entry) => structuredClone(entry.spec))
     .sort((left, right) => left.event_id.localeCompare(right.event_id));
   return deepFreeze({
-    schema_version: RELEASE053B_EVENT_UNIVERSE_HASH_SCHEMA,
+    schema_version: RELEASE053B_EVENT_UNIVERSE_SCHEMA,
     derivation_contract:
       "independent-noaa-ncei-daily-tmax-before-provider-access",
     events,
