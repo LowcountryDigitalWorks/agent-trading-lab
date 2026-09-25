@@ -378,6 +378,9 @@ function diagnosticMaterialWithoutHash(diagnostic) {
 export function validateRelease053SchemaDiagnostic(diagnostic) {
   closedKeys(diagnostic, [
     "schema_version",
+    "proof_run_id",
+    "call_sequence",
+    "terminal_reason_code",
     "tool",
     "source_contract_hash",
     "parser_descriptor_version",
@@ -397,6 +400,9 @@ export function validateRelease053SchemaDiagnostic(diagnostic) {
     "diagnostic_hash",
   ], "SchemaDiagnostic");
   assert(diagnostic.schema_version === RELEASE053A_SCHEMA_DIAGNOSTIC_VERSION, "SchemaDiagnostic schema_version mismatch");
+  nonEmpty(diagnostic.proof_run_id, "SchemaDiagnostic proof_run_id");
+  positiveInteger(diagnostic.call_sequence, "SchemaDiagnostic call_sequence");
+  assert(diagnostic.terminal_reason_code === "source_contract_parse_error", "SchemaDiagnostic terminal_reason_code mismatch");
   assert(Object.hasOwn(RELEASE053A_TOOL_SCHEMA_DESCRIPTORS, diagnostic.tool), "SchemaDiagnostic tool unsupported");
   for (const field of [
     "source_contract_hash",
@@ -457,7 +463,14 @@ export function validateRelease053SchemaDiagnostic(diagnostic) {
   return diagnostic;
 }
 
-export function diagnoseRelease053ToolSchema(tool, actualPayload) {
+export function diagnoseRelease053ToolSchema({
+  tool,
+  actualPayload,
+  proofRunId,
+  callSequence,
+}) {
+  nonEmpty(proofRunId, "schema diagnostic proofRunId");
+  positiveInteger(callSequence, "schema diagnostic callSequence");
   const shape = RELEASE053A_TOOL_SCHEMA_DESCRIPTORS[tool];
   assert(shape, `unsupported parser diagnostic tool: ${tool}`);
 
@@ -485,6 +498,9 @@ export function diagnoseRelease053ToolSchema(tool, actualPayload) {
 
   const material = {
     schema_version: RELEASE053A_SCHEMA_DIAGNOSTIC_VERSION,
+    proof_run_id: proofRunId,
+    call_sequence: callSequence,
+    terminal_reason_code: "source_contract_parse_error",
     tool,
     source_contract_hash: cryptoStructSourceContractHash(),
     parser_descriptor_version: RELEASE053A_PARSER_DESCRIPTOR_VERSION,
