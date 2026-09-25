@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lowcountrydigitalworks.com/schemas/cryptostruct-quality-feasibility.v1.schema.json",
+  "title": "CryptoStruct source-quality feasibility design v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_contract_hash",
+    "quality_thresholds",
+    "sample",
+    "rationale",
+    "classifications"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "cryptostruct-quality-feasibility.v1"
+    },
+    "source_contract_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "quality_thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trades_60m_min",
+        "turnover_usd_60m_min",
+        "spread_bps_60m_avg_max",
+        "top1_depth_min_side_usd_60m_min"
+      ],
+      "properties": {
+        "trades_60m_min": {
+          "const": 5
+        },
+        "turnover_usd_60m_min": {
+          "const": 100
+        },
+        "spread_bps_60m_avg_max": {
+          "const": 2000
+        },
+        "top1_depth_min_side_usd_60m_min": {
+          "const": 50
+        }
+      }
+    },
+    "sample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maximum_search_calls",
+        "maximum_get_instrument_calls",
+        "maximum_snapshot_calls",
+        "maximum_total_source_calls",
+        "minimum_evaluable_snapshots",
+        "minimum_unique_mapped_events",
+        "per_event_snapshot_cap",
+        "no_retry",
+        "deterministic_order_only"
+      ],
+      "properties": {
+        "maximum_search_calls": {
+          "const": 8
+        },
+        "maximum_get_instrument_calls": {
+          "const": 40
+        },
+        "maximum_snapshot_calls": {
+          "const": 30
+        },
+        "maximum_total_source_calls": {
+          "const": 78
+        },
+        "minimum_evaluable_snapshots": {
+          "const": 30
+        },
+        "minimum_unique_mapped_events": {
+          "const": 30
+        },
+        "per_event_snapshot_cap": {
+          "const": 1
+        },
+        "no_retry": {
+          "const": true
+        },
+        "deterministic_order_only": {
+          "const": true
+        }
+      }
+    },
+    "rationale": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "downstream_max_selected_events",
+        "downstream_min_unique_resolved_events",
+        "downstream_cutoffs_per_event",
+        "implied_minimum_per_snapshot_pass_rate",
+        "one_sided_confidence_level",
+        "all_30_pass_lower_bound",
+        "rationale_code"
+      ],
+      "properties": {
+        "downstream_max_selected_events": {
+          "const": 150
+        },
+        "downstream_min_unique_resolved_events": {
+          "const": 100
+        },
+        "downstream_cutoffs_per_event": {
+          "const": 3
+        },
+        "implied_minimum_per_snapshot_pass_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "one_sided_confidence_level": {
+          "const": 0.95
+        },
+        "all_30_pass_lower_bound": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "rationale_code": {
+          "const": "all-pass-screen-clears-downstream-three-cutoff-geometry"
+        }
+      }
+    },
+    "classifications": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "blocked",
+        "insufficient",
+        "technically_viable"
+      ],
+      "properties": {
+        "blocked": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "insufficient": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "technically_viable": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}
