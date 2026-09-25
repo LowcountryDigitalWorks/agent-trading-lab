@@ -123,25 +123,22 @@ const GET_INSTRUMENT_DESCRIPTOR = descriptor("object", {
     "total_bytes_compressed",
     "listed_since",
   ],
-  properties: Object.fromEntries(
-    [
-      "code",
-      "type",
-      "venue",
-      "venue_name",
-      "base",
-      "quote",
-      "state",
-      "first_day",
-      "last_day",
-      "listed_since",
-    ].map((key) => [key, { type: "string" }]),
-  ),
+  properties: {
+    instrument_id: { type: "integer" },
+    code: { type: "string" },
+    type: { type: "string" },
+    venue: { type: "string" },
+    venue_name: { type: "string" },
+    base: { type: "string" },
+    quote: { type: "string" },
+    state: { type: "string" },
+    days_with_data: { type: "integer" },
+    first_day: { type: "string" },
+    last_day: { type: "string" },
+    total_bytes_compressed: { type: "integer" },
+    listed_since: { type: "string" },
+  },
 });
-GET_INSTRUMENT_DESCRIPTOR.properties.instrument_id = { type: "integer" };
-GET_INSTRUMENT_DESCRIPTOR.properties.days_with_data = { type: "integer" };
-GET_INSTRUMENT_DESCRIPTOR.properties.total_bytes_compressed = { type: "integer" };
-Object.freeze(GET_INSTRUMENT_DESCRIPTOR.properties);
 
 const SEARCH_HIT_DESCRIPTOR = descriptor("object", {
   required: [
