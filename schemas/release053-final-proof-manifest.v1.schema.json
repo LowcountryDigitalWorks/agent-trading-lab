@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lowcountrydigitalworks.com/schemas/release053-final-proof-manifest.v1.schema.json",
+  "title": "Release 0.5.3 final source proof integrity manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "proof_run_id",
+    "runner_commit",
+    "source_contract_hash",
+    "event_universe_hash",
+    "query_plan_hash",
+    "semantic_bundle_hash",
+    "quality_screen_config_hash",
+    "diagnostic_contract_hash",
+    "base_control_manifest_hash",
+    "ledger_final_hash",
+    "proof_summary_hash",
+    "diagnostics_hash",
+    "classification",
+    "artifact_hash"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "release053-final-proof-manifest.v1"
+    },
+    "proof_run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "runner_commit": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_contract_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "event_universe_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "query_plan_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "semantic_bundle_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "quality_screen_config_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "diagnostic_contract_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "base_control_manifest_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "ledger_final_hash": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "proof_summary_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "diagnostics_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "classification": {
+      "enum": [
+        "BLOCKED",
+        "INSUFFICIENT",
+        "TECHNICALLY_VIABLE"
+      ]
+    },
+    "artifact_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}
