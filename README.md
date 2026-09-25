@@ -116,3 +116,27 @@ Release 0.5.3A makes zero CryptoStruct Data-returning calls and does not
 authorize Release 0.5.3B, model/OOS work, or trading.
 
 See [Release 0.5.3A CryptoStruct qualification redesign](docs/RELEASE_0_5_3A_CRYPTOSTRUCT_QUALIFICATION_REDESIGN.md).
+
+
+## Release 0.5.3B offline final-proof design
+
+Release 0.5.3B turns the accepted 0.5.3A contracts into an executable
+**offline-only** final source-qualification candidate. It freezes a real
+40-event NOAA/NCEI weather universe, exactly eight provider-neutral search
+queries, the semantic bundle, quality-screen configuration, parser-diagnostic
+contract, call ceilings, and a release-specific integrity manifest before any
+hypothetical provider access.
+
+The future proof design remains a
+`NON_INFERENTIAL_DETERMINISTIC_ENGINEERING_SCREEN`: search <=8,
+get_instrument <=40, snapshots <=30, total Data-returning attempts <=78, one
+snapshot per event, zero retries, and the first frozen quality rejection stops
+immediately as INSUFFICIENT. The quality thresholds are unchanged.
+
+The candidate adds a manual-only Release 0.5.3 workflow definition, but
+Release 0.5.3B performs **zero CryptoStruct Data-returning calls** and does not
+dispatch that workflow. A future live proof would require Product acceptance,
+merge, fresh ORCH4 authority, current license/terms revalidation, and exact
+commit/tree/hash/proof-ID freezing.
+
+See [Release 0.5.3B final-proof design](docs/RELEASE_0_5_3B_FINAL_PROOF_DESIGN.md).
