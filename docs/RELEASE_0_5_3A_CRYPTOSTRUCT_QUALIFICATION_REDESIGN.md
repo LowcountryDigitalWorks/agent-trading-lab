@@ -313,7 +313,7 @@ No threshold tuning occurs.
 
 ### Future maximum source-call budget
 
-The proposed **maximum** future 0.5.3B proof budget is:
+The proposed **maximum** future 0.5.3B proof budget remains:
 
 - up to 8 `search_instruments` calls;
 - up to 40 `get_instrument` calls;
@@ -334,47 +334,82 @@ A future proof would:
 4. validate at most one candidate per independent event;
 5. take snapshots only for VERIFIED unique events;
 6. use the first 30 VERIFIED unique events in deterministic order;
-7. take at most one qualification snapshot per independent event.
+7. take at most one qualification snapshot per independent event;
+8. stop immediately after the first quality rejection.
 
 Unmapped and ambiguous candidates are semantic attrition, not quality
 failures.
 
 Parser failures are source-contract failures, not quality failures.
 
+A quality rejection is terminal **INSUFFICIENT** evidence for this screen.
+The runner must not consume later snapshot candidates in an attempt to restore
+a 30 / 30 result.
+
 ### Minimum evaluable sample
 
 Positive technical viability requires:
 
-**30 evaluable snapshots from 30 unique VERIFIED independent events.**
+**exactly 30 evaluable snapshots from at least 30 unique VERIFIED independent
+events, with 30 / 30 passing the frozen quality gate.**
 
-This is a source-qualification screen, not the later OOS cohort.
+This is a source-qualification engineering screen, not the later OOS cohort.
 
-### Why 30
+### Why 30 — non-inferential deterministic engineering screen
 
-The existing downstream contract allows at most 150 selected events and
-requires at least 100 unique resolved events with 300 paired eligible
-decisions across three cutoffs.
+The 30-event screen is explicitly:
 
-A simple screening geometry therefore implies a per-snapshot pass rate
-`p` satisfying:
+**NON-INFERENTIAL DETERMINISTIC ENGINEERING SCREEN**
 
-`150 * p^3 >= 100`
+It is not a statistically representative sample and makes no confidence,
+power, or future pass-probability claim.
 
-or:
+Thirty remains a pragmatic bounded engineering screen because:
 
-`p >= (100 / 150)^(1/3) = 0.873580...`
+- Release 0.5.2 produced only six evaluable quality snapshots;
+- 30 unique independently specified events provide materially broader
+  engineering evidence than those six observations;
+- the entire source-qualification attempt remains bounded at no more than 78
+  Data-returning calls;
+- 30 / 30 is deliberately strict before spending on a much larger forward
+  cohort;
+- one snapshot per event keeps this screen bounded and prevents it from being
+  confused with the later three-cutoff experiment.
 
-For 30 successes in 30 independent screening observations, the exact
-one-sided 95% binomial lower bound is:
+A **TECHNICALLY_VIABLE** result may mean only:
 
-`0.05^(1/30) = 0.904966...`
+> 30 deterministically selected, independently specified event mappings each
+> produced one parseable snapshot that passed every frozen source-quality
+> threshold during the bounded qualification run.
 
-That lower bound exceeds the downstream geometric requirement.
+It does **not** establish or estimate:
 
-This does **not** prove OOS viability or independence across future cutoffs.
-It is deliberately a conservative source screen: if the provider cannot
-produce 30 / 30 quality-passing event-first snapshots, there is insufficient
-evidence to spend the much larger later cohort budget.
+- statistical representativeness;
+- a future source-quality pass probability;
+- independence across events;
+- independence across future cutoffs;
+- T-24h / T-6h / T-1h temporal stability;
+- later category robustness;
+- satisfaction of the later >=100-event / >=300-decision cohort floors.
+
+No binomial confidence bound or multi-cutoff probability calculation is part
+of the acceptance rule.
+
+### Observation-accounting invariants
+
+Before future classification, aggregate evidence must be internally
+consistent.
+
+Required:
+
+`quality_passes + quality_rejects === evaluable_snapshots`
+
+`evaluable_snapshots <= verified_unique_events`
+
+`evaluable_snapshots <= 30`
+
+An impossible aggregate state is invalid evidence and must fail closed rather
+than being silently classified.
 
 ### Future BLOCKED rule
 
@@ -392,31 +427,52 @@ It must not be fixed and retried under the same authority.
 
 ### Future INSUFFICIENT rule
 
-Return **INSUFFICIENT** if, without any BLOCKED condition:
+After BLOCKED checks, return **INSUFFICIENT immediately** if:
 
+- `quality_rejects > 0`, even when more deterministic candidates remain; or
 - the frozen deterministic plan is exhausted before 30 unique VERIFIED events
   are available; or
-- fewer than 30 evaluable snapshots are obtained; or
-- the 30 evaluable snapshots contain **any** quality rejection.
+- the plan ends with fewer than 30 evaluable snapshots without a BLOCKED
+  condition.
 
-No additional events may be selected after observing poor quality.
+The first quality rejection makes the predeclared 30 / 30 positive criterion
+impossible.
+
+No additional snapshot candidate may be selected or dispatched after that
+rejection.
 
 ### Future technically-viable rule
 
 Return **TECHNICALLY_VIABLE** only if all are true:
 
-- 30 unique events have VERIFIED source mappings;
-- 30 snapshots are evaluable under the strict parser;
-- 30 / 30 pass all four unchanged quality thresholds;
-- source/parser failures = 0;
+- at least 30 unique events have VERIFIED source mappings;
+- evaluable snapshots = exactly 30;
+- quality passes = exactly 30;
+- quality rejects = 0;
+- source failures = 0;
+- parser failures = 0;
+- accounting failures = 0;
 - retries = 0.
 
-This outcome would mean only:
-
-> CryptoStruct is technically viable enough to justify Product considering a
-> larger, separately gated cohort design.
+This outcome would mean only that the bounded engineering screen passed.
 
 It would not authorize model scoring, OOS-A/OOS-B, trading, or customer use.
+
+### Category / cutoff robustness remains unestablished
+
+This 30-event one-snapshot-per-event screen does **not** establish later
+category robustness or three-cutoff stability.
+
+The frozen Phase 0B OOS-B requirement remains at least three eligible
+categories with >=20 resolved events each.
+
+A later Product/ORCH4 design freeze could separately define the independent
+event-universe/category composition before provider access. Provider-observed
+category tuning remains prohibited.
+
+No Release 0.5.3B engineering-screen result may be described as satisfying
+that later OOS-B category requirement or the T-24h / T-6h / T-1h temporal
+requirement.
 
 ---
 
