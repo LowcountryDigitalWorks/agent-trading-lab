@@ -43,7 +43,10 @@
       "minLength": 1
     },
     "runner_version": {
-      "const": "0.5.2"
+      "enum": [
+        "0.5.2",
+        "0.5.3"
+      ]
     },
     "started_at": {
       "type": "string",
