@@ -16,6 +16,7 @@ import {
   release053QualityFeasibilityDesignHash,
   release053SnapshotQuality,
   selectRelease053EventFirstSemanticCandidates,
+  selectRelease053SnapshotSample,
   validateRelease053EventFirstQueryPlan,
   validateRelease053QualityFeasibilityDesign,
   validateRelease053SchemaDiagnostic,
@@ -283,6 +284,29 @@ test("candidate selection is deterministic, one-per-event, deduped, and exact-ma
   ]);
   assert.equal(selection.no_match_count, 1);
   assert.equal(selection.ambiguous_match_count, 0);
+});
+
+test("snapshot sample selector takes the first 30 VERIFIED unique events deterministically", () => {
+  const candidates = [];
+  for (let index = 0; index < 35; index += 1) {
+    candidates.push({
+      status: "VERIFIED",
+      event_id: `event-${String(index).padStart(2, "0")}`,
+      instrument_id: String(1000 + index),
+    });
+  }
+  candidates.splice(5, 0, {
+    status: "VERIFIED",
+    event_id: "event-04",
+    instrument_id: "9999",
+  });
+
+  const sample = selectRelease053SnapshotSample(candidates);
+  assert.equal(sample.length, 30);
+  assert.equal(new Set(sample.map((item) => item.event_id)).size, 30);
+  assert.deepEqual(sample[0], { event_id: "event-00", instrument_id: "1000" });
+  assert.deepEqual(sample[4], { event_id: "event-04", instrument_id: "1004" });
+  assert.deepEqual(sample.at(-1), { event_id: "event-29", instrument_id: "1029" });
 });
 
 test("quality-feasibility design freezes thresholds, source-call budget, and 30-event sample", () => {
