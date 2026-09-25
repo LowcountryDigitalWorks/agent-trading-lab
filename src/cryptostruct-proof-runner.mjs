@@ -73,6 +73,7 @@ const MANIFEST_FIELDS = Object.freeze([
   "unique_candidate_count",
   "classification",
   "ledger_final_hash",
+  "proof_summary_hash",
   "artifact_hash",
 ]);
 
@@ -632,6 +633,7 @@ function configPaths(outputDir) {
     config: join(outputDir, ".proof-config.json"),
     ledger: join(outputDir, "sanitized-call-ledger.jsonl"),
     manifest: join(outputDir, "proof-manifest.json"),
+    summary: join(outputDir, "proof-summary.json"),
     artifactHash: join(outputDir, "artifact-hash.txt"),
   };
 }
@@ -668,8 +670,19 @@ export function validateProofManifest(manifest) {
   nonNegativeInteger(manifest.unique_candidate_count, "manifest.unique_candidate_count");
   assert(PROOF_CLASSIFICATIONS.includes(manifest.classification), "manifest classification invalid");
   nullableSha(manifest.ledger_final_hash, "manifest.ledger_final_hash");
+  nullableSha(manifest.proof_summary_hash, "manifest.proof_summary_hash");
   assert(isSha256Hex(manifest.artifact_hash), "manifest artifact_hash must be SHA-256 hex");
   return manifest;
+}
+
+async function optionalProofSummaryHash(path) {
+  try {
+    const parsed = JSON.parse(await readFile(path, "utf8"));
+    return sha256Hex(canonicalSerialize(parsed));
+  } catch (error) {
+    if (error?.code === "ENOENT") return null;
+    throw error;
+  }
 }
 
 function artifactHashMaterial(manifestWithoutArtifactHash, records) {
@@ -703,6 +716,8 @@ export async function finalizeProofArtifacts(
     const records = parseProofCallLedgerJsonl(ledgerContent);
     const validation = validateProofCallLedger(records, { requireTerminalForEveryReservation: true });
     assert(existingManifest.ledger_final_hash === validation.last_record_hash, "existing manifest ledger_final_hash mismatch");
+    const currentSummaryHash = await optionalProofSummaryHash(paths.summary);
+    assert(existingManifest.proof_summary_hash === currentSummaryHash, "existing manifest proof_summary_hash mismatch");
     return existingManifest;
   }
 
@@ -712,6 +727,7 @@ export async function finalizeProofArtifacts(
   });
   await ledger.reconcileOutstandingReservations({ completion_timestamp: endedAt });
   const validation = ledger.snapshot({ requireTerminalForEveryReservation: true });
+  const proofSummaryHash = await optionalProofSummaryHash(paths.summary);
 
   const withoutArtifactHash = {
     schema_version: "cryptostruct-proof-manifest.v1",
@@ -732,6 +748,7 @@ export async function finalizeProofArtifacts(
     unique_candidate_count: validation.unique_candidate_count,
     classification,
     ledger_final_hash: validation.last_record_hash,
+    proof_summary_hash: proofSummaryHash,
   };
   const manifest = {
     ...withoutArtifactHash,

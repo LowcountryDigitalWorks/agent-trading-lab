@@ -15,7 +15,8 @@
     "docs:check": "node scripts/check-doc-links.mjs",
     "security:check": "npm audit --omit=dev --audit-level=high",
     "proof:synthetic": "node scripts/run-release052-synthetic-proof.mjs",
-    "verify": "npm run format:check && npm run lint && npm test && npm run secret:scan && npm run docs:check && npm run security:check"
+    "verify": "npm run format:check && npm run lint && npm test && npm run secret:scan && npm run docs:check && npm run security:check",
+    "proof:live": "node scripts/run-release052-live-proof.mjs"
   },
   "license": "Apache-2.0"
 }
