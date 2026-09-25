@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lowcountrydigitalworks.com/schemas/cryptostruct-event-first-query-plan.v1.schema.json",
+  "title": "CryptoStruct event-first query plan v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "derivation_contract",
+    "normalization_version",
+    "source_contract_hash",
+    "search_defaults",
+    "events",
+    "candidate_selection"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "cryptostruct-event-first-query-plan.v1"
+    },
+    "derivation_contract": {
+      "const": "independent-spec-authored-before-provider-access"
+    },
+    "normalization_version": {
+      "const": "release-0.5.3-exact-normalized-alias.v1"
+    },
+    "source_contract_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "search_defaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "class",
+        "venue",
+        "limit"
+      ],
+      "properties": {
+        "class": {
+          "const": "prediction"
+        },
+        "venue": {
+          "const": "polymarket"
+        },
+        "limit": {
+          "const": 10
+        }
+      }
+    },
+    "events": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "event_id",
+          "independent_event_spec_hash",
+          "spec",
+          "query_terms",
+          "semantic_aliases"
+        ],
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "independent_event_spec_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "spec": {
+            "$ref": "./independent-event-spec.v1.schema.json"
+          },
+          "query_terms": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "semantic_aliases": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "candidate_selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event_order",
+        "query_order",
+        "hit_order",
+        "dedupe_key",
+        "max_search_calls",
+        "max_get_instrument_calls",
+        "max_snapshot_calls",
+        "max_total_source_calls",
+        "per_event_snapshot_cap",
+        "retry",
+        "no_match",
+        "ambiguous_match"
+      ],
+      "properties": {
+        "event_order": {
+          "const": "event_id_asc"
+        },
+        "query_order": {
+          "const": "first_declared_occurrence"
+        },
+        "hit_order": {
+          "const": "provider_order"
+        },
+        "dedupe_key": {
+          "const": "instrument_id_first_occurrence"
+        },
+        "max_search_calls": {
+          "const": 8
+        },
+        "max_get_instrument_calls": {
+          "const": 40
+        },
+        "max_snapshot_calls": {
+          "const": 30
+        },
+        "max_total_source_calls": {
+          "const": 78
+        },
+        "per_event_snapshot_cap": {
+          "const": 1
+        },
+        "retry": {
+          "const": false
+        },
+        "no_match": {
+          "const": "semantic_mapping_unproven"
+        },
+        "ambiguous_match": {
+          "const": "semantic_mapping_unproven"
+        }
+      }
+    }
+  }
+}

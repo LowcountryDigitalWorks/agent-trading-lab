@@ -1,0 +1,22 @@
+{
+  "instrument_id": 12345,
+  "code": "DO-NOT-RETAIN-EVENT-CODE",
+  "venue": "polymarket",
+  "as_of": "2026-09-25T02:00:00.000Z",
+  "change_24h_pct": null,
+  "vwap_last_minute": null,
+  "last_60m": {
+    "turnover_usd": 250,
+    "turnover_buy_usd": null,
+    "turnover_sell_usd": null,
+    "trades": 12,
+    "liquidations": null,
+    "spread_bps_avg": 250,
+    "top1_depth_usd": {
+      "bid": 100,
+      "ask": 120
+    },
+    "top20_depth_usd": null
+  },
+  "last_24h": null
+}
