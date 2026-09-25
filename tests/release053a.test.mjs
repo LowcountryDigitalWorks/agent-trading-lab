@@ -28,6 +28,15 @@ async function fixture(name) {
   ));
 }
 
+function diagnoseSnapshot(actualPayload, callSequence = 1) {
+  return diagnoseRelease053ToolSchema({
+    tool: "get_market_snapshot",
+    actualPayload,
+    proofRunId: "release053a-offline-synthetic",
+    callSequence,
+  });
+}
+
 function spec({
   eventId,
   question,
@@ -100,12 +109,12 @@ function normalizedInstrument({
 
 test("0.5.3A schema diagnostic returns null for the current valid synthetic snapshot", async () => {
   const valid = await fixture("release053a-snapshot.valid.json");
-  assert.equal(diagnoseRelease053ToolSchema("get_market_snapshot", valid), null);
+  assert.equal(diagnoseSnapshot(valid), null);
 });
 
 test("schema diagnostic distinguishes a missing expected field", async () => {
   const input = await fixture("release053a-snapshot.missing.json");
-  const diagnostic = diagnoseRelease053ToolSchema("get_market_snapshot", input);
+  const diagnostic = diagnoseSnapshot(input);
   assert.equal(diagnostic.primary_category, "MISSING_EXPECTED_FIELD");
   assert(diagnostic.mismatch_categories.includes("MISSING_EXPECTED_FIELD"));
   assert(diagnostic.normalized_failing_paths.includes("$.price_last"));
@@ -114,7 +123,7 @@ test("schema diagnostic distinguishes a missing expected field", async () => {
 
 test("schema diagnostic distinguishes an unexpected extra field without retaining its name or value", async () => {
   const input = await fixture("release053a-snapshot.extra.json");
-  const diagnostic = diagnoseRelease053ToolSchema("get_market_snapshot", input);
+  const diagnostic = diagnoseSnapshot(input);
   assert.equal(diagnostic.primary_category, "UNEXPECTED_EXTRA_FIELD");
   const retained = JSON.stringify(diagnostic);
   assert.equal(retained.includes("undocumented_payload_value"), false);
@@ -124,7 +133,7 @@ test("schema diagnostic distinguishes an unexpected extra field without retainin
 
 test("schema diagnostic distinguishes a wrong JSON type without retaining the raw value", async () => {
   const input = await fixture("release053a-snapshot.wrong-type.json");
-  const diagnostic = diagnoseRelease053ToolSchema("get_market_snapshot", input);
+  const diagnostic = diagnoseSnapshot(input);
   assert.equal(diagnostic.primary_category, "WRONG_JSON_TYPE");
   assert(diagnostic.normalized_failing_paths.includes("$.last_60m.trades"));
   assert.equal(
@@ -135,7 +144,7 @@ test("schema diagnostic distinguishes a wrong JSON type without retaining the ra
 
 test("schema diagnostic distinguishes nested shape mismatch without retaining unexpected nested keys or values", async () => {
   const input = await fixture("release053a-snapshot.nested-shape.json");
-  const diagnostic = diagnoseRelease053ToolSchema("get_market_snapshot", input);
+  const diagnostic = diagnoseSnapshot(input);
   assert.equal(diagnostic.primary_category, "NESTED_SHAPE_MISMATCH");
   assert(
     diagnostic.normalized_failing_paths.includes("$.last_60m.top1_depth_usd"),
@@ -147,8 +156,8 @@ test("schema diagnostic distinguishes nested shape mismatch without retaining un
 
 test("schema diagnostic is deterministic, hash-bound, bounded, and value-free", async () => {
   const input = await fixture("release053a-snapshot.extra.json");
-  const first = diagnoseRelease053ToolSchema("get_market_snapshot", input);
-  const second = diagnoseRelease053ToolSchema("get_market_snapshot", input);
+  const first = diagnoseSnapshot(input);
+  const second = diagnoseSnapshot(input);
   assert.deepEqual(first, second);
   assert.match(first.diagnostic_hash, /^[a-f0-9]{64}$/u);
   assert.match(release053ParserContractHash("get_market_snapshot"), /^[a-f0-9]{64}$/u);
