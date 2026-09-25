@@ -885,6 +885,28 @@ export function selectRelease053EventFirstSemanticCandidates({
   });
 }
 
+export function selectRelease053SnapshotSample(verifiedCandidates) {
+  assert(Array.isArray(verifiedCandidates), "verifiedCandidates must be an array");
+  const selected = [];
+  const seenEventIds = new Set();
+
+  for (const candidate of verifiedCandidates) {
+    plain(candidate, "verified candidate");
+    assert(candidate.status === "VERIFIED", "snapshot sample requires VERIFIED candidates only");
+    nonEmpty(candidate.event_id, "verified candidate event_id");
+    nonEmpty(String(candidate.instrument_id), "verified candidate instrument_id");
+    if (seenEventIds.has(candidate.event_id)) continue;
+    seenEventIds.add(candidate.event_id);
+    selected.push({
+      event_id: candidate.event_id,
+      instrument_id: String(candidate.instrument_id),
+    });
+    if (selected.length >= EVENT_FIRST_LIMITS.max_snapshot_calls) break;
+  }
+
+  return deepFreeze(selected);
+}
+
 export function release053QualityFeasibilityDesign() {
   const downstreamRequiredPassRate = Math.pow(
     COHORT_FLOORS.min_unique_resolved_events / COHORT_FLOORS.max_selected_events,
