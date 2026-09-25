@@ -498,6 +498,14 @@ function summaryObservation(summary, { planExhausted }) {
   };
 }
 
+export function classifyRelease053bObservation(observation) {
+  try {
+    return classifyRelease053FutureObservation(observation);
+  } catch {
+    return "BLOCKED";
+  }
+}
+
 function classifySummary(summary, { planExhausted }) {
   if (
     summary.failures.source > 0
@@ -752,6 +760,14 @@ export function validateRelease053bProofManifest(manifest) {
 export async function finalizeRelease053bProofArtifacts(outputDir, { classification }) {
   assert(["BLOCKED", "INSUFFICIENT", "TECHNICALLY_VIABLE"].includes(classification), "invalid Release 0.5.3B classification");
   const p = paths(outputDir);
+
+  let existingReleaseManifest = null;
+  try {
+    existingReleaseManifest = JSON.parse(await readFile(p.releaseManifest, "utf8"));
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+
   const baseManifest = await finalizeProofArtifacts(outputDir, {
     classification: baseClassification(classification),
   });
@@ -768,7 +784,7 @@ export async function finalizeRelease053bProofArtifacts(outputDir, { classificat
   assert(baseManifest.ledger_final_hash === ledgerValidation.last_record_hash, "base manifest ledger hash mismatch");
 
   const freeze = release053bFreezeSurface();
-  const withoutArtifactHash = {
+  const expectedMaterial = {
     schema_version: RELEASE053B_FINAL_PROOF_MANIFEST_SCHEMA,
     proof_run_id: summary.proof_run_id,
     runner_commit: summary.runner_commit,
@@ -784,9 +800,20 @@ export async function finalizeRelease053bProofArtifacts(outputDir, { classificat
     diagnostics_hash: diagnosticsHash,
     classification,
   };
+
+  if (existingReleaseManifest !== null) {
+    validateRelease053bProofManifest(existingReleaseManifest);
+    const { artifact_hash: _artifactHash, ...existingMaterial } = existingReleaseManifest;
+    assert(
+      canonicalSerialize(existingMaterial) === canonicalSerialize(expectedMaterial),
+      "existing Release 0.5.3 proof manifest evidence mismatch",
+    );
+    return deepFreeze(existingReleaseManifest);
+  }
+
   const manifest = {
-    ...withoutArtifactHash,
-    artifact_hash: sha256Hex(canonicalSerialize(withoutArtifactHash)),
+    ...expectedMaterial,
+    artifact_hash: sha256Hex(canonicalSerialize(expectedMaterial)),
   };
   validateRelease053bProofManifest(manifest);
   await durableWriteJson(p.releaseManifest, manifest);
