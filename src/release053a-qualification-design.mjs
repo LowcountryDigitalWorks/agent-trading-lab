@@ -1,6 +1,5 @@
 import { canonicalSerialize, isSha256Hex, sha256Hex } from "./canonical.mjs";
 import {
-  COHORT_FLOORS,
   PHASE0B_ALLOWED_CATEGORIES,
   QUALITY_GATE,
   createSourceMappingRecord,
@@ -908,18 +907,10 @@ export function selectRelease053SnapshotSample(verifiedCandidates) {
 }
 
 export function release053QualityFeasibilityDesign() {
-  const downstreamRequiredPassRate = Math.pow(
-    COHORT_FLOORS.min_unique_resolved_events / COHORT_FLOORS.max_selected_events,
-    1 / 3,
-  );
-  const allPassOneSided95LowerBound = Math.pow(
-    0.05,
-    1 / EVENT_FIRST_LIMITS.minimum_evaluable_snapshots,
-  );
-
   const design = {
     schema_version: RELEASE053A_QUALITY_FEASIBILITY_VERSION,
     source_contract_hash: cryptoStructSourceContractHash(),
+    screen_type: "NON_INFERENTIAL_DETERMINISTIC_ENGINEERING_SCREEN",
     quality_thresholds: {
       trades_60m_min: QUALITY_GATE.min_trades_60m,
       turnover_usd_60m_min: QUALITY_GATE.min_turnover_usd_60m,
@@ -938,15 +929,22 @@ export function release053QualityFeasibilityDesign() {
       deterministic_order_only: true,
     },
     rationale: {
-      downstream_max_selected_events: COHORT_FLOORS.max_selected_events,
-      downstream_min_unique_resolved_events: COHORT_FLOORS.min_unique_resolved_events,
-      downstream_cutoffs_per_event: 3,
-      implied_minimum_per_snapshot_pass_rate:
-        Number(downstreamRequiredPassRate.toFixed(6)),
-      one_sided_confidence_level: 0.95,
-      all_30_pass_lower_bound:
-        Number(allPassOneSided95LowerBound.toFixed(6)),
-      rationale_code: "all-pass-screen-clears-downstream-three-cutoff-geometry",
+      evidence_basis: [
+        "materially_broader_than_release052_six_evaluable_snapshots",
+        "thirty_independently_specified_unique_events",
+        "bounded_at_seventy_eight_data_returning_calls",
+        "strict_thirty_of_thirty_engineering_go_no_go_screen",
+      ],
+      positive_result_meaning:
+        "30 deterministically selected, independently specified event mappings each produced one parseable snapshot that passed every frozen source-quality threshold during the bounded qualification run.",
+      unestablished: [
+        "statistical_representativeness",
+        "future_source_quality_probability",
+        "cross_event_independence",
+        "t24_t6_t1_temporal_stability",
+        "later_category_robustness",
+        "later_100_event_300_decision_cohort_floors",
+      ],
     },
     classifications: {
       blocked: [
@@ -954,16 +952,18 @@ export function release053QualityFeasibilityDesign() {
         "source_transport_or_access_failure",
         "source_contract_parse_failure",
         "attempt_accounting_or_budget_failure",
+        "retry_or_non_frozen_execution_path",
       ],
       insufficient: [
+        "first_quality_reject_stops_screen_immediately",
         "deterministic_plan_exhausted_before_30_verified_unique_events",
         "fewer_than_30_evaluable_snapshots_without_source_failure",
-        "any_quality_reject_among_30_evaluable_snapshots",
       ],
       technically_viable: [
         "30_verified_unique_events",
-        "30_evaluable_snapshots",
-        "30_quality_passes",
+        "exactly_30_evaluable_snapshots",
+        "exactly_30_quality_passes",
+        "zero_quality_rejects",
         "zero_source_or_parser_failures",
         "zero_retries",
       ],
@@ -977,6 +977,7 @@ export function validateRelease053QualityFeasibilityDesign(design) {
   closedKeys(design, [
     "schema_version",
     "source_contract_hash",
+    "screen_type",
     "quality_thresholds",
     "sample",
     "rationale",
@@ -984,6 +985,10 @@ export function validateRelease053QualityFeasibilityDesign(design) {
   ], "QualityFeasibilityDesign");
   assert(design.schema_version === RELEASE053A_QUALITY_FEASIBILITY_VERSION, "QualityFeasibilityDesign schema_version mismatch");
   assert(design.source_contract_hash === cryptoStructSourceContractHash(), "QualityFeasibilityDesign source contract mismatch");
+  assert(
+    design.screen_type === "NON_INFERENTIAL_DETERMINISTIC_ENGINEERING_SCREEN",
+    "QualityFeasibilityDesign screen_type mismatch",
+  );
 
   closedKeys(design.quality_thresholds, [
     "trades_60m_min",
@@ -1023,17 +1028,34 @@ export function validateRelease053QualityFeasibilityDesign(design) {
         + design.sample.maximum_snapshot_calls,
     "QualityFeasibilityDesign total source-call budget mismatch",
   );
+  assert(design.sample.maximum_search_calls === 8, "QualityFeasibilityDesign search-call ceiling changed");
+  assert(design.sample.maximum_get_instrument_calls === 40, "QualityFeasibilityDesign instrument-call ceiling changed");
+  assert(design.sample.maximum_snapshot_calls === 30, "QualityFeasibilityDesign snapshot-call ceiling changed");
+  assert(design.sample.maximum_total_source_calls === 78, "QualityFeasibilityDesign total source-call ceiling changed");
   assert(design.sample.no_retry === true, "QualityFeasibilityDesign must forbid retries");
   assert(design.sample.deterministic_order_only === true, "QualityFeasibilityDesign order must be deterministic");
   assert(design.sample.minimum_evaluable_snapshots === 30, "QualityFeasibilityDesign minimum evaluable sample changed");
   assert(design.sample.minimum_unique_mapped_events === 30, "QualityFeasibilityDesign unique mapped-event minimum changed");
+  assert(design.sample.per_event_snapshot_cap === 1, "QualityFeasibilityDesign per-event snapshot cap changed");
 
-  plain(design.rationale, "QualityFeasibilityDesign rationale");
-  assert(
-    design.rationale.all_30_pass_lower_bound
-      > design.rationale.implied_minimum_per_snapshot_pass_rate,
-    "QualityFeasibilityDesign all-pass lower bound must exceed downstream implied pass rate",
-  );
+  closedKeys(design.rationale, [
+    "evidence_basis",
+    "positive_result_meaning",
+    "unestablished",
+  ], "QualityFeasibilityDesign rationale");
+  assert(Array.isArray(design.rationale.evidence_basis) && design.rationale.evidence_basis.length === 4, "QualityFeasibilityDesign evidence_basis mismatch");
+  nonEmpty(design.rationale.positive_result_meaning, "QualityFeasibilityDesign positive_result_meaning");
+  assert(Array.isArray(design.rationale.unestablished) && design.rationale.unestablished.length >= 6, "QualityFeasibilityDesign unestablished list incomplete");
+  for (const required of [
+    "statistical_representativeness",
+    "future_source_quality_probability",
+    "cross_event_independence",
+    "t24_t6_t1_temporal_stability",
+    "later_category_robustness",
+    "later_100_event_300_decision_cohort_floors",
+  ]) {
+    assert(design.rationale.unestablished.includes(required), `QualityFeasibilityDesign must mark ${required} unestablished`);
+  }
 
   closedKeys(design.classifications, [
     "blocked",
@@ -1050,7 +1072,7 @@ export function release053QualityFeasibilityDesignHash() {
   return sha256Hex(canonicalSerialize(release053QualityFeasibilityDesign()));
 }
 
-export function classifyRelease053FutureObservation(observation) {
+export function validateRelease053FutureObservation(observation) {
   closedKeys(observation, [
     "pre_dispatch_valid",
     "source_failure_count",
@@ -1076,6 +1098,24 @@ export function classifyRelease053FutureObservation(observation) {
   ]) nonNegativeInteger(observation[field], `FutureObservation ${field}`);
   assert(typeof observation.pre_dispatch_valid === "boolean", "FutureObservation pre_dispatch_valid must be boolean");
   assert(typeof observation.plan_exhausted === "boolean", "FutureObservation plan_exhausted must be boolean");
+  assert(
+    observation.quality_passes + observation.quality_rejects
+      === observation.evaluable_snapshots,
+    "FutureObservation quality accounting mismatch",
+  );
+  assert(
+    observation.evaluable_snapshots <= observation.verified_unique_events,
+    "FutureObservation evaluable snapshots exceed verified unique events",
+  );
+  assert(
+    observation.evaluable_snapshots <= EVENT_FIRST_LIMITS.max_snapshot_calls,
+    "FutureObservation evaluable snapshots exceed frozen snapshot ceiling",
+  );
+  return observation;
+}
+
+export function classifyRelease053FutureObservation(observation) {
+  validateRelease053FutureObservation(observation);
 
   if (
     !observation.pre_dispatch_valid
@@ -1085,15 +1125,43 @@ export function classifyRelease053FutureObservation(observation) {
     || observation.retry_count > 0
   ) return "BLOCKED";
 
+  if (observation.quality_rejects > 0) return "INSUFFICIENT";
+
   if (
     observation.verified_unique_events >= EVENT_FIRST_LIMITS.minimum_unique_mapped_events
-    && observation.evaluable_snapshots >= EVENT_FIRST_LIMITS.minimum_evaluable_snapshots
+    && observation.evaluable_snapshots === EVENT_FIRST_LIMITS.minimum_evaluable_snapshots
     && observation.quality_passes === EVENT_FIRST_LIMITS.minimum_evaluable_snapshots
     && observation.quality_rejects === 0
   ) return "TECHNICALLY_VIABLE";
 
   if (observation.plan_exhausted) return "INSUFFICIENT";
   return "CONTINUE_DETERMINISTIC_PLAN";
+}
+
+export function selectRelease053NextSnapshotCandidate({
+  observation,
+  verifiedCandidates,
+  sampledEventIds = [],
+}) {
+  const classification = classifyRelease053FutureObservation(observation);
+  if (classification !== "CONTINUE_DETERMINISTIC_PLAN") return null;
+
+  assert(Array.isArray(verifiedCandidates), "verifiedCandidates must be an array");
+  assert(Array.isArray(sampledEventIds), "sampledEventIds must be an array");
+  const sampled = new Set(sampledEventIds);
+
+  for (const candidate of verifiedCandidates) {
+    plain(candidate, "verified candidate");
+    assert(candidate.status === "VERIFIED", "next snapshot candidate must be VERIFIED");
+    nonEmpty(candidate.event_id, "next snapshot candidate event_id");
+    nonEmpty(String(candidate.instrument_id), "next snapshot candidate instrument_id");
+    if (sampled.has(candidate.event_id)) continue;
+    return deepFreeze({
+      event_id: candidate.event_id,
+      instrument_id: String(candidate.instrument_id),
+    });
+  }
+  return null;
 }
 
 export function release053SnapshotQuality(snapshot) {
@@ -1116,9 +1184,14 @@ export function release053AFeasibilityDecision() {
     "Release 0.5.3A future call budget unexpectedly changed",
   );
   assert(
-    design.rationale.all_30_pass_lower_bound
-      > design.rationale.implied_minimum_per_snapshot_pass_rate,
-    "Release 0.5.3A quality feasibility rationale failed",
+    design.screen_type === "NON_INFERENTIAL_DETERMINISTIC_ENGINEERING_SCREEN",
+    "Release 0.5.3A screen must remain non-inferential",
+  );
+  assert(
+    design.rationale.unestablished.includes("t24_t6_t1_temporal_stability")
+      && design.rationale.unestablished.includes("later_category_robustness")
+      && design.rationale.unestablished.includes("later_100_event_300_decision_cohort_floors"),
+    "Release 0.5.3A future robustness boundaries must remain unestablished",
   );
   return RELEASE053A_OFFLINE_RECOMMENDATION;
 }
