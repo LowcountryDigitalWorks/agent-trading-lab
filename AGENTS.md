@@ -1,21 +1,22 @@
 # Repository instructions
 
-Current authorized work is **Release 0.5.3A — OFFLINE CryptoStruct Qualification Redesign Feasibility** under `LowcountryDigitalWorks/business-operations#281`, authority comment `5826110019`.
+Current authorized work is **Release 0.5.3B — OFFLINE FINAL-PROOF DESIGN / INTEGRATION REVIEW** under `LowcountryDigitalWorks/business-operations#281`, authority comment `5835962405`.
 
-Release 0.5.2 is closed/completed with final disposition **BLOCKED — ACCEPTED**. Its one-proof authority is consumed and must not be reused.
+Release 0.5.3A is accepted/merged on main `c47c61be3b0dafdf3db1d06a7671150b29e6a980`. Release 0.5.2 remains closed/completed with final disposition **BLOCKED — ACCEPTED**; its one-proof authority is consumed and must not be reused.
 
-## Release 0.5.3A current boundary
+## Release 0.5.3B current boundary
 
 - CryptoStruct Data-returning calls: **ZERO**.
-- Do not call `search_instruments`, `get_instrument`, `get_market_snapshot`, or any other CryptoStruct source tool.
+- Do not call `search_instruments`, `get_instrument`, `get_market_snapshot`, or any other CryptoStruct source tool during this release.
 - Do not access Polymarket or Kalshi directly.
-- Use only repository code/docs, retained sanitized 0.5.2 evidence, published provider documentation, synthetic fixtures, deterministic offline tests, and CI.
-- Keep the Release 0.5.2 quality thresholds unchanged.
-- Do not infer the 14 prior snapshot parse-error schema differences from aggregate evidence.
-- Event-first semantics must be frozen from IndependentEventSpec material before any hypothetical future provider access.
-- No fuzzy/LLM/hindsight semantic matching.
-- No Release 0.5.3B live workflow or source proof is authorized.
-- Development works on a branch/PR and does not merge.
+- Authorized work is repository code/docs/schemas, deterministic synthetic fixtures/tests, CI, merged 0.5.3A contracts, retained sanitized 0.5.2 evidence, read-only authoritative non-market public references for independent event definition, and definition/validation of a future manual workflow that is **not dispatched**.
+- Current engineering screen remains `NON_INFERENTIAL_DETERMINISTIC_ENGINEERING_SCREEN`.
+- Frozen future ceilings remain search <=8, get_instrument <=40, snapshots <=30, total Data-returning attempts <=78, one snapshot/event, zero retry.
+- Frozen quality thresholds remain trades >=5, turnover >=100 USD, spread <=2000 bps, minimum-side top-1 depth >=50 USD.
+- IndependentEventSpec/event universe, query plan, semantic aliases, hashes, and category authority must be frozen before any hypothetical future provider access.
+- No provider hindsight, fuzzy/LLM/probability-assisted semantic mapping, threshold tuning, rescue after a quality rejection, or live query widening.
+- No live workflow dispatch, model/OOS-A/OOS-B, trading/orders/P&L, database, account/OAuth/Premium/purchase, or customer functionality.
+- Development works on a branch/PR and **does not merge**.
 - Incremental cash and real capital remain $0.
 
 
