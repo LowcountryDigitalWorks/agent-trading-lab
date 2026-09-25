@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { canonicalSerialize } from "../src/canonical.mjs";
+import { canonicalSerialize, sha256Hex } from "../src/canonical.mjs";
 import {
   parseGetMarketSnapshotResult,
   validateIndependentEventSpec,
@@ -522,12 +522,52 @@ test("post-finalization diagnostics tamper is rejected by release053 integrity m
   const records = parseRelease053DiagnosticsJsonl(content);
   const modified = structuredClone(records[0]);
   modified.call_sequence += 100;
-  modified.diagnostic_hash = "0".repeat(64);
+  const { diagnostic_hash: _oldHash, ...diagnosticMaterial } = modified;
+  modified.diagnostic_hash = sha256Hex(canonicalSerialize(diagnosticMaterial));
   await writeFile(diagnosticsPath, canonicalSerialize(modified) + "\n", "utf8");
   await assert.rejects(
     finalizeRelease053bProofArtifacts(outputDir, { classification: result.classification }),
-    /invalid diagnostics JSONL|diagnostic_hash mismatch/u,
+    /existing Release 0\.5\.3 proof manifest evidence mismatch/u,
   );
+});
+
+test("retained final artifact excludes reconstructive synthetic provider payload material", async (t) => {
+  const outputDir = await tempDir(t);
+  const world = fixtureWorld();
+  const firstEntry = release053bIndependentEventEntries()[0];
+  const distinctiveProviderCode = firstEntry.semantic_aliases[0];
+
+  const result = await executeRelease053bFinalProof({
+    outputDir,
+    authority: authority(),
+    invokeTool: syntheticTransport({ world }),
+  });
+  await finalizeRelease053bProofArtifacts(outputDir, {
+    classification: result.classification,
+  });
+
+  const retained = (
+    await Promise.all([
+      "sanitized-call-ledger.jsonl",
+      "sanitized-schema-diagnostics.jsonl",
+      "proof-summary.json",
+      "proof-manifest.json",
+      "artifact-hash.txt",
+      "release053-proof-manifest.json",
+      "release053-artifact-hash.txt",
+    ].map((name) => readFile(join(outputDir, name), "utf8")))
+  ).join("\n");
+
+  for (const forbidden of [
+    distinctiveProviderCode,
+    '"price_last"',
+    '"last_60m"',
+    '"top1_depth_usd"',
+    '"raw_response"',
+    '"raw_orderbook"',
+  ]) {
+    assert.equal(retained.includes(forbidden), false, forbidden);
+  }
 });
 
 test("release053 future workflow is manual-only/read-only and remains release-specific", async () => {
