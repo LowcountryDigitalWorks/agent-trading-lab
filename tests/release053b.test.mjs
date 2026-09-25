@@ -233,6 +233,27 @@ test("event universe, query plan, and semantic bundle are canonical and stable",
   assert.equal(canonicalSerialize(release053bEventUniverse()), canonicalSerialize(release053bEventUniverse()));
 });
 
+test("checked-in event-universe schema freezes exactly 40 IndependentEventSpec records", async () => {
+  const schema = JSON.parse(await readFile(
+    new URL("../schemas/release053-independent-event-universe.v1.schema.json", import.meta.url),
+    "utf8",
+  ));
+  assert.equal(
+    schema.properties.schema_version.const,
+    "release053-independent-event-universe.v1",
+  );
+  assert.equal(schema.properties.events.minItems, 40);
+  assert.equal(schema.properties.events.maxItems, 40);
+  assert.equal(
+    schema.properties.events.items.$ref,
+    "./independent-event-spec.v1.schema.json",
+  );
+  assert.equal(
+    release053bEventUniverse().schema_version,
+    schema.properties.schema_version.const,
+  );
+});
+
 test("query plan freezes exactly eight provider-neutral searches", () => {
   assert.deepEqual(release053bSearchCalls(), [
     { q: "Atlanta daily high temperature", class: "prediction", venue: "polymarket", limit: 10 },
@@ -244,6 +265,21 @@ test("query plan freezes exactly eight provider-neutral searches", () => {
     { q: "Phoenix daily high temperature", class: "prediction", venue: "polymarket", limit: 10 },
     { q: "Seattle daily high temperature", class: "prediction", venue: "polymarket", limit: 10 },
   ]);
+});
+
+test("0.5.3B freeze surface is canonical and reviewable", () => {
+  const freeze = release053bFreezeSurface();
+  console.log("RELEASE053B_FREEZE " + JSON.stringify(freeze));
+  for (const field of [
+    "source_contract_hash",
+    "event_universe_hash",
+    "query_plan_hash",
+    "semantic_bundle_hash",
+    "quality_screen_config_hash",
+    "diagnostic_contract_hash",
+  ]) {
+    assert.match(freeze[field], /^[a-f0-9]{64}$/u);
+  }
 });
 
 test("freeze surface enforces 8/40/30/78, one snapshot/event, zero retries", () => {
