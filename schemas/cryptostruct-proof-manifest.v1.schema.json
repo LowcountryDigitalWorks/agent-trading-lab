@@ -23,6 +23,7 @@
     "unique_candidate_count",
     "classification",
     "ledger_final_hash",
+    "proof_summary_hash",
     "artifact_hash"
   ],
   "properties": {
@@ -130,6 +131,13 @@
       ]
     },
     "ledger_final_hash": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "proof_summary_hash": {
       "type": [
         "string",
         "null"
