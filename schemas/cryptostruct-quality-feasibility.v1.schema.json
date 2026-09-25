@@ -7,6 +7,7 @@
   "required": [
     "schema_version",
     "source_contract_hash",
+    "screen_type",
     "quality_thresholds",
     "sample",
     "rationale",
@@ -19,6 +20,9 @@
     "source_contract_hash": {
       "type": "string",
       "pattern": "^[a-f0-9]{64}$"
+    },
+    "screen_type": {
+      "const": "NON_INFERENTIAL_DETERMINISTIC_ENGINEERING_SCREEN"
     },
     "quality_thresholds": {
       "type": "object",
@@ -92,39 +96,37 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "downstream_max_selected_events",
-        "downstream_min_unique_resolved_events",
-        "downstream_cutoffs_per_event",
-        "implied_minimum_per_snapshot_pass_rate",
-        "one_sided_confidence_level",
-        "all_30_pass_lower_bound",
-        "rationale_code"
+        "evidence_basis",
+        "positive_result_meaning",
+        "unestablished"
       ],
       "properties": {
-        "downstream_max_selected_events": {
-          "const": 150
+        "evidence_basis": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         },
-        "downstream_min_unique_resolved_events": {
-          "const": 100
+        "positive_result_meaning": {
+          "const": "30 deterministically selected, independently specified event mappings each produced one parseable snapshot that passed every frozen source-quality threshold during the bounded qualification run."
         },
-        "downstream_cutoffs_per_event": {
-          "const": 3
-        },
-        "implied_minimum_per_snapshot_pass_rate": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1
-        },
-        "one_sided_confidence_level": {
-          "const": 0.95
-        },
-        "all_30_pass_lower_bound": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1
-        },
-        "rationale_code": {
-          "const": "all-pass-screen-clears-downstream-three-cutoff-geometry"
+        "unestablished": {
+          "type": "array",
+          "minItems": 6,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "statistical_representativeness",
+              "future_source_quality_probability",
+              "cross_event_independence",
+              "t24_t6_t1_temporal_stability",
+              "later_category_robustness",
+              "later_100_event_300_decision_cohort_floors"
+            ]
+          }
         }
       }
     },
