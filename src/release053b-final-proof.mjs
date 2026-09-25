@@ -677,21 +677,19 @@ export async function executeRelease053bFinalProof({
         for (const reason of quality.reasons) summary.quality.rejection_reason_counts[reason] += 1;
       }
 
-      summary.classification = classifySummary(summary, { planExhausted: false });
-      await writeRelease053bProofSummary(outputDir, summary);
+      const decision = classifySummary(summary, { planExhausted: false });
+      if (decision === "CONTINUE_DETERMINISTIC_PLAN") {
+        await writeRelease053bProofSummary(outputDir, summary);
+        continue;
+      }
 
-      if (summary.classification === "INSUFFICIENT") {
-        runner.close();
-        return deepFreeze({ classification: summary.classification, summary: structuredClone(summary) });
-      }
-      if (summary.classification === "BLOCKED") {
-        runner.close();
-        return deepFreeze({ classification: summary.classification, summary: structuredClone(summary) });
-      }
-      if (summary.classification === "TECHNICALLY_VIABLE") {
-        runner.close();
-        return deepFreeze({ classification: summary.classification, summary: structuredClone(summary) });
-      }
+      summary.classification = decision;
+      await writeRelease053bProofSummary(outputDir, summary);
+      runner.close();
+      return deepFreeze({
+        classification: summary.classification,
+        summary: structuredClone(summary),
+      });
     }
 
     summary.classification = classifySummary(summary, { planExhausted: true });
