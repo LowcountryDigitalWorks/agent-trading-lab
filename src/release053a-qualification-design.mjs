@@ -304,7 +304,9 @@ function walkExpectedPaths(node, value, path, presence, nestedHashes, mismatches
 
   if (node.type === "array") {
     if (node.item && value.length > 0) {
-      walkExpectedPaths(node.item, value[0], `${path}[]`, presence, nestedHashes, mismatches);
+      for (const item of value.slice(0, 10)) {
+        walkExpectedPaths(node.item, item, `${path}[]`, presence, nestedHashes, mismatches);
+      }
     }
     return;
   }
@@ -678,6 +680,15 @@ export function validateRelease053EventFirstQueryPlan(plan) {
     "max_total_source_calls",
     "per_event_snapshot_cap",
   ]) positiveInteger(plan.candidate_selection[field], `EventFirstQueryPlan ${field}`);
+  assert(plan.candidate_selection.event_order === "event_id_asc", "EventFirstQueryPlan event_order mismatch");
+  assert(plan.candidate_selection.query_order === "first_declared_occurrence", "EventFirstQueryPlan query_order mismatch");
+  assert(plan.candidate_selection.hit_order === "provider_order", "EventFirstQueryPlan hit_order mismatch");
+  assert(plan.candidate_selection.dedupe_key === "instrument_id_first_occurrence", "EventFirstQueryPlan dedupe_key mismatch");
+  assert(plan.candidate_selection.max_search_calls === EVENT_FIRST_LIMITS.max_search_calls, "EventFirstQueryPlan max_search_calls mismatch");
+  assert(plan.candidate_selection.max_get_instrument_calls === EVENT_FIRST_LIMITS.max_get_instrument_calls, "EventFirstQueryPlan max_get_instrument_calls mismatch");
+  assert(plan.candidate_selection.max_snapshot_calls === EVENT_FIRST_LIMITS.max_snapshot_calls, "EventFirstQueryPlan max_snapshot_calls mismatch");
+  assert(plan.candidate_selection.max_total_source_calls === EVENT_FIRST_LIMITS.max_total_source_calls, "EventFirstQueryPlan max_total_source_calls mismatch");
+  assert(plan.candidate_selection.per_event_snapshot_cap === EVENT_FIRST_LIMITS.per_event_snapshot_cap, "EventFirstQueryPlan per_event_snapshot_cap mismatch");
   assert(plan.candidate_selection.retry === false, "EventFirstQueryPlan retry must be false");
   assert(plan.candidate_selection.no_match === "semantic_mapping_unproven", "EventFirstQueryPlan no_match mismatch");
   assert(plan.candidate_selection.ambiguous_match === "semantic_mapping_unproven", "EventFirstQueryPlan ambiguous_match mismatch");
