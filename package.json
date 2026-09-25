@@ -1,8 +1,8 @@
 {
   "name": "@lowcountrydigitalworks/agent-trading-lab",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "private": true,
-  "description": "Deterministic CryptoStruct proof-control runner with durable attempt accounting and sanitized recovery artifacts.",
+  "description": "Deterministic CryptoStruct source-qualification design with event-first semantics, sanitized diagnostics, and durable proof controls.",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -16,7 +16,9 @@
     "security:check": "npm audit --omit=dev --audit-level=high",
     "proof:synthetic": "node scripts/run-release052-synthetic-proof.mjs",
     "verify": "npm run format:check && npm run lint && npm test && npm run secret:scan && npm run docs:check && npm run security:check",
-    "proof:live": "node scripts/run-release052-live-proof.mjs"
+    "proof:live": "node scripts/run-release052-live-proof.mjs",
+    "proof:release053": "node scripts/run-release053-final-proof.mjs",
+    "proof:release053:freeze": "node scripts/print-release053b-freeze.mjs"
   },
   "license": "Apache-2.0"
 }
