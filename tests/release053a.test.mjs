@@ -16,8 +16,10 @@ import {
   release053QualityFeasibilityDesignHash,
   release053SnapshotQuality,
   selectRelease053EventFirstSemanticCandidates,
+  selectRelease053NextSnapshotCandidate,
   selectRelease053SnapshotSample,
   validateRelease053EventFirstQueryPlan,
+  validateRelease053FutureObservation,
   validateRelease053QualityFeasibilityDesign,
   validateRelease053SchemaDiagnostic,
 } from "../src/release053a-qualification-design.mjs";
@@ -309,9 +311,13 @@ test("snapshot sample selector takes the first 30 VERIFIED unique events determi
   assert.deepEqual(sample.at(-1), { event_id: "event-29", instrument_id: "1029" });
 });
 
-test("quality-feasibility design freezes thresholds, source-call budget, and 30-event sample", () => {
+test("quality-feasibility design is a non-inferential 30-event engineering screen", () => {
   const design = release053QualityFeasibilityDesign();
   assert.equal(validateRelease053QualityFeasibilityDesign(design), design);
+  assert.equal(
+    design.screen_type,
+    "NON_INFERENTIAL_DETERMINISTIC_ENGINEERING_SCREEN",
+  );
   assert.deepEqual(design.quality_thresholds, {
     trades_60m_min: 5,
     turnover_usd_60m_min: 100,
@@ -329,53 +335,197 @@ test("quality-feasibility design freezes thresholds, source-call budget, and 30-
     no_retry: true,
     deterministic_order_only: true,
   });
-  assert(design.rationale.all_30_pass_lower_bound > design.rationale.implied_minimum_per_snapshot_pass_rate);
-  assert.equal(design.rationale.implied_minimum_per_snapshot_pass_rate, 0.87358);
-  assert.equal(design.rationale.all_30_pass_lower_bound, 0.904966);
+  assert.equal(
+    design.rationale.positive_result_meaning,
+    "30 deterministically selected, independently specified event mappings each produced one parseable snapshot that passed every frozen source-quality threshold during the bounded qualification run.",
+  );
+  for (const limitation of [
+    "statistical_representativeness",
+    "future_source_quality_probability",
+    "cross_event_independence",
+    "t24_t6_t1_temporal_stability",
+    "later_category_robustness",
+    "later_100_event_300_decision_cohort_floors",
+  ]) {
+    assert(design.rationale.unestablished.includes(limitation), limitation);
+  }
   assert.match(release053QualityFeasibilityDesignHash(), /^[a-f0-9]{64}$/u);
 });
 
-test("future observation classification is predeclared and fail-closed", () => {
-  const base = {
+function validFutureObservation(overrides = {}) {
+  return {
     pre_dispatch_valid: true,
     source_failure_count: 0,
     parser_failure_count: 0,
     accounting_failure_count: 0,
+    plan_exhausted: false,
+    verified_unique_events: 0,
+    evaluable_snapshots: 0,
+    quality_passes: 0,
+    quality_rejects: 0,
+    retry_count: 0,
+    ...overrides,
+  };
+}
+
+test("30 of 30 with zero failures is TECHNICALLY_VIABLE", () => {
+  const observation = validFutureObservation({
     plan_exhausted: true,
     verified_unique_events: 30,
     evaluable_snapshots: 30,
     quality_passes: 30,
-    quality_rejects: 0,
-    retry_count: 0,
-  };
-  assert.equal(classifyRelease053FutureObservation(base), "TECHNICALLY_VIABLE");
+  });
+  assert.equal(validateRelease053FutureObservation(observation), observation);
   assert.equal(
-    classifyRelease053FutureObservation({ ...base, parser_failure_count: 1 }),
-    "BLOCKED",
+    classifyRelease053FutureObservation(observation),
+    "TECHNICALLY_VIABLE",
   );
+});
+
+test("one quality reject stops immediately even when plan is not exhausted", () => {
+  const observation = validFutureObservation({
+    verified_unique_events: 30,
+    evaluable_snapshots: 30,
+    quality_passes: 29,
+    quality_rejects: 1,
+    plan_exhausted: false,
+  });
   assert.equal(
-    classifyRelease053FutureObservation({ ...base, quality_passes: 29, quality_rejects: 1 }),
+    classifyRelease053FutureObservation(observation),
     "INSUFFICIENT",
   );
+});
+
+test("one early quality reject before 30 stops immediately", () => {
+  const observation = validFutureObservation({
+    verified_unique_events: 7,
+    evaluable_snapshots: 7,
+    quality_passes: 6,
+    quality_rejects: 1,
+    plan_exhausted: false,
+  });
   assert.equal(
-    classifyRelease053FutureObservation({
-      ...base,
-      verified_unique_events: 29,
-      evaluable_snapshots: 29,
-      quality_passes: 29,
-      plan_exhausted: true,
-    }),
+    classifyRelease053FutureObservation(observation),
     "INSUFFICIENT",
   );
-  assert.equal(
-    classifyRelease053FutureObservation({
-      ...base,
-      verified_unique_events: 20,
-      evaluable_snapshots: 20,
-      quality_passes: 20,
+});
+
+test("29 of 30 plus one reject is INSUFFICIENT regardless of plan_exhausted", () => {
+  for (const plan_exhausted of [false, true]) {
+    assert.equal(
+      classifyRelease053FutureObservation(validFutureObservation({
+        verified_unique_events: 30,
+        evaluable_snapshots: 30,
+        quality_passes: 29,
+        quality_rejects: 1,
+        plan_exhausted,
+      })),
+      "INSUFFICIENT",
+    );
+  }
+});
+
+test("no later snapshot candidate is selected after a quality rejection", () => {
+  const candidates = [
+    { status: "VERIFIED", event_id: "event-next", instrument_id: "2001" },
+  ];
+  const next = selectRelease053NextSnapshotCandidate({
+    observation: validFutureObservation({
+      verified_unique_events: 1,
+      evaluable_snapshots: 1,
+      quality_passes: 0,
+      quality_rejects: 1,
       plan_exhausted: false,
     }),
+    verifiedCandidates: candidates,
+  });
+  assert.equal(next, null);
+});
+
+test("next snapshot candidate is available only while deterministic plan may continue", () => {
+  const next = selectRelease053NextSnapshotCandidate({
+    observation: validFutureObservation({
+      verified_unique_events: 2,
+      evaluable_snapshots: 1,
+      quality_passes: 1,
+      quality_rejects: 0,
+      plan_exhausted: false,
+    }),
+    verifiedCandidates: [
+      { status: "VERIFIED", event_id: "event-used", instrument_id: "2000" },
+      { status: "VERIFIED", event_id: "event-next", instrument_id: "2001" },
+    ],
+    sampledEventIds: ["event-used"],
+  });
+  assert.deepEqual(next, {
+    event_id: "event-next",
+    instrument_id: "2001",
+  });
+});
+
+test("future observation rejects impossible quality accounting", () => {
+  assert.throws(
+    () => classifyRelease053FutureObservation(validFutureObservation({
+      verified_unique_events: 10,
+      evaluable_snapshots: 10,
+      quality_passes: 9,
+      quality_rejects: 0,
+    })),
+    /quality accounting mismatch/u,
+  );
+});
+
+test("future observation rejects more evaluable snapshots than VERIFIED events", () => {
+  assert.throws(
+    () => classifyRelease053FutureObservation(validFutureObservation({
+      verified_unique_events: 9,
+      evaluable_snapshots: 10,
+      quality_passes: 10,
+    })),
+    /evaluable snapshots exceed verified unique events/u,
+  );
+});
+
+test("future observation rejects more than 30 evaluable snapshots", () => {
+  assert.throws(
+    () => classifyRelease053FutureObservation(validFutureObservation({
+      verified_unique_events: 31,
+      evaluable_snapshots: 31,
+      quality_passes: 31,
+    })),
+    /evaluable snapshots exceed frozen snapshot ceiling/u,
+  );
+});
+
+test("source/parser/accounting/retry failures remain BLOCKED", () => {
+  for (const patch of [
+    { pre_dispatch_valid: false },
+    { source_failure_count: 1 },
+    { parser_failure_count: 1 },
+    { accounting_failure_count: 1 },
+    { retry_count: 1 },
+  ]) {
+    assert.equal(
+      classifyRelease053FutureObservation(validFutureObservation(patch)),
+      "BLOCKED",
+    );
+  }
+});
+
+test("clean partial evidence may continue only before exhaustion and without rejects", () => {
+  const partial = validFutureObservation({
+    verified_unique_events: 20,
+    evaluable_snapshots: 20,
+    quality_passes: 20,
+    plan_exhausted: false,
+  });
+  assert.equal(
+    classifyRelease053FutureObservation(partial),
     "CONTINUE_DETERMINISTIC_PLAN",
+  );
+  assert.equal(
+    classifyRelease053FutureObservation({ ...partial, plan_exhausted: true }),
+    "INSUFFICIENT",
   );
 });
 
@@ -426,9 +576,48 @@ test("checked-in 0.5.3A schemas freeze the same offline contracts", async () => 
   assert.equal(diagnosticSchema.properties.normalized_failing_paths.maxItems, 8);
   assert.equal(planSchema.properties.candidate_selection.properties.max_total_source_calls.const, 78);
   assert.equal(planSchema.properties.candidate_selection.properties.retry.const, false);
+  assert.equal(
+    qualitySchema.properties.screen_type.const,
+    "NON_INFERENTIAL_DETERMINISTIC_ENGINEERING_SCREEN",
+  );
   assert.equal(qualitySchema.properties.quality_thresholds.properties.trades_60m_min.const, 5);
+  assert.equal(qualitySchema.properties.quality_thresholds.properties.turnover_usd_60m_min.const, 100);
+  assert.equal(qualitySchema.properties.quality_thresholds.properties.spread_bps_60m_avg_max.const, 2000);
+  assert.equal(qualitySchema.properties.quality_thresholds.properties.top1_depth_min_side_usd_60m_min.const, 50);
   assert.equal(qualitySchema.properties.sample.properties.minimum_evaluable_snapshots.const, 30);
+  assert.equal(qualitySchema.properties.sample.properties.minimum_unique_mapped_events.const, 30);
   assert.equal(qualitySchema.properties.sample.properties.maximum_total_source_calls.const, 78);
+  assert.equal(qualitySchema.properties.sample.properties.per_event_snapshot_cap.const, 1);
+  assert.equal(qualitySchema.properties.sample.properties.no_retry.const, true);
+});
+
+test("quality schema and docs contain no inferential p-cubed or binomial acceptance rationale", async () => {
+  const qualitySchemaText = await readFile(
+    new URL("../schemas/cryptostruct-quality-feasibility.v1.schema.json", import.meta.url),
+    "utf8",
+  );
+  const docsText = await readFile(
+    new URL("../docs/RELEASE_0_5_3A_CRYPTOSTRUCT_QUALIFICATION_REDESIGN.md", import.meta.url),
+    "utf8",
+  );
+
+  for (const forbidden of [
+    "150 * p^3",
+    "0.873580",
+    "0.904966",
+    "one_sided_confidence_level",
+    "all_30_pass_lower_bound",
+    "all-pass-screen-clears-downstream-three-cutoff-geometry",
+  ]) {
+    assert.equal(qualitySchemaText.includes(forbidden), false, forbidden);
+    assert.equal(docsText.includes(forbidden), false, forbidden);
+  }
+
+  assert(docsText.includes("NON-INFERENTIAL DETERMINISTIC ENGINEERING SCREEN"));
+  assert(docsText.includes("No binomial confidence bound"));
+  assert(docsText.includes("T-24h / T-6h / T-1h temporal stability"));
+  assert(docsText.includes("at least three eligible"));
+  assert(docsText.includes(">=20 resolved events each"));
 });
 
 test("0.5.3A returns exactly the authorized offline recommendation", () => {
