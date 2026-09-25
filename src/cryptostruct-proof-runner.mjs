@@ -769,11 +769,20 @@ export class ProofBudgetError extends Error {
 }
 
 export class DeterministicCryptoStructProofRunner {
-  constructor({ outputDir, config, ledger, invokeTool, clock, nowMs }) {
+  constructor({
+    outputDir,
+    config,
+    ledger,
+    invokeTool,
+    onSourceContractParseError = null,
+    clock,
+    nowMs,
+  }) {
     this.outputDir = outputDir;
     this.config = config;
     this.ledger = ledger;
     this.invokeTool = invokeTool;
+    this.onSourceContractParseError = onSourceContractParseError;
     this.clock = clock;
     this.nowMs = nowMs;
     this.startedEpochMs = Date.parse(config.started_at);
@@ -794,6 +803,7 @@ export class DeterministicCryptoStructProofRunner {
     discovery_plan,
     selector_config,
     invokeTool = invokeCryptoStructMcp,
+    onSourceContractParseError = null,
     clock = () => new Date().toISOString(),
     nowMs = () => Date.now(),
   }) {
@@ -822,6 +832,7 @@ export class DeterministicCryptoStructProofRunner {
       config,
       ledger,
       invokeTool,
+      onSourceContractParseError,
       clock,
       nowMs,
     });
@@ -830,6 +841,7 @@ export class DeterministicCryptoStructProofRunner {
   static async resume({
     outputDir,
     invokeTool = invokeCryptoStructMcp,
+    onSourceContractParseError = null,
     clock = () => new Date().toISOString(),
     nowMs = () => Date.now(),
   }) {
@@ -845,6 +857,7 @@ export class DeterministicCryptoStructProofRunner {
       config,
       ledger,
       invokeTool,
+      onSourceContractParseError,
       clock,
       nowMs,
     });
@@ -1014,8 +1027,9 @@ export class DeterministicCryptoStructProofRunner {
         return { terminal_status: terminal.terminal_status, terminal, parsed: null };
       }
 
+      let parsedPayload = null;
       try {
-        const parsedPayload = parseMcpToolEnvelope(envelope, tool);
+        parsedPayload = parseMcpToolEnvelope(envelope, tool);
         const parsed = toolParser(tool)(parsedPayload);
         let candidateHashes = [];
         if (tool === "search_instruments") {
@@ -1053,11 +1067,28 @@ export class DeterministicCryptoStructProofRunner {
           http_status: rawResponse.httpStatus,
           response_content_hash: contentHash,
         });
+        let diagnostic = null;
+        let diagnostic_error = null;
+        if (typeof this.onSourceContractParseError === "function" && parsedPayload !== null) {
+          try {
+            diagnostic = await this.onSourceContractParseError({
+              tool,
+              parsedPayload,
+              proofRunId: this.config.proof_run_id,
+              callSequence: reservation.call_sequence,
+              terminal,
+            });
+          } catch (diagnosticError) {
+            diagnostic_error = diagnosticError;
+          }
+        }
         return {
           terminal_status: terminal.terminal_status,
           terminal,
           parsed: null,
           error,
+          diagnostic,
+          diagnostic_error,
         };
       }
     } catch (error) {
