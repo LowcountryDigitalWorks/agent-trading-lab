@@ -1,5 +1,24 @@
 # Repository instructions
 
+Current authorized work is **Release 0.5.3A — OFFLINE CryptoStruct Qualification Redesign Feasibility** under `LowcountryDigitalWorks/business-operations#281`, authority comment `5826110019`.
+
+Release 0.5.2 is closed/completed with final disposition **BLOCKED — ACCEPTED**. Its one-proof authority is consumed and must not be reused.
+
+## Release 0.5.3A current boundary
+
+- CryptoStruct Data-returning calls: **ZERO**.
+- Do not call `search_instruments`, `get_instrument`, `get_market_snapshot`, or any other CryptoStruct source tool.
+- Do not access Polymarket or Kalshi directly.
+- Use only repository code/docs, retained sanitized 0.5.2 evidence, published provider documentation, synthetic fixtures, deterministic offline tests, and CI.
+- Keep the Release 0.5.2 quality thresholds unchanged.
+- Do not infer the 14 prior snapshot parse-error schema differences from aggregate evidence.
+- Event-first semantics must be frozen from IndependentEventSpec material before any hypothetical future provider access.
+- No fuzzy/LLM/hindsight semantic matching.
+- No Release 0.5.3B live workflow or source proof is authorized.
+- Development works on a branch/PR and does not merge.
+- Incremental cash and real capital remain $0.
+
+
 This repository is the public research codebase for the Lowcountry Digital Works Agent Trading Lab.
 
 Release 0.5.2 is the proof-control hardening release authorized by `LowcountryDigitalWorks/business-operations#275`, based on accepted main `5503b7732db6e3b6d578768f513d544389ef2c37`.
